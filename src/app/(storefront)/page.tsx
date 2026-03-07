@@ -2,35 +2,31 @@ import { HeroBanner } from "@/components/home/hero-banner";
 import { PromotionGrid } from "@/components/home/promotion-grid";
 import { CategoryGrid } from "@/components/home/category-grid";
 import { FeaturedProducts } from "@/components/home/featured-products";
-import { NewArrivals } from "@/components/home/new-arrivals";
 import { CategoryProductSection } from "@/components/home/category-product-section";
 import { BottomPromoBanners } from "@/components/home/bottom-promo-banners";
 import { TrustBadges } from "@/components/home/trust-badges";
-import { BrandPartners } from "@/components/home/brand-partners";
 import { GoogleReviews } from "@/components/home/google-reviews";
 import { NewsSection } from "@/components/home/news-section";
 import { getBanners, getBlogPosts, getGoogleReviews } from "@/lib/api/content";
 import {
   getFeaturedProducts,
-  getNewProducts,
   getCategories,
   getProductsByCategory,
 } from "@/lib/api/products";
 
 export default async function HomePage() {
-  const [banners, categories, featuredProducts, newProducts, reviews, posts] =
+  const [banners, categories, featuredProducts, reviews, posts] =
     await Promise.all([
       getBanners(),
       getCategories(),
       getFeaturedProducts(),
-      getNewProducts(5),
       getGoogleReviews(),
       getBlogPosts(3),
     ]);
 
-  const showcaseCategories = categories.slice(0, 3);
+  const showcaseCategories = categories.filter((c) => c.id !== "cat-2").slice(0, 2);
   const categoryProducts = await Promise.all(
-    showcaseCategories.map((cat) => getProductsByCategory(cat.id, 5))
+    showcaseCategories.map((cat) => getProductsByCategory(cat.id, 10))
   );
 
   return (
@@ -49,9 +45,7 @@ export default async function HomePage() {
       ))}
 
       <BottomPromoBanners />
-      <NewArrivals products={newProducts} />
       <TrustBadges />
-      <BrandPartners />
       <GoogleReviews reviews={reviews} />
       <NewsSection posts={posts} />
     </>

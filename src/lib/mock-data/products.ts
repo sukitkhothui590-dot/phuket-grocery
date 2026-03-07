@@ -96,6 +96,76 @@ export const products: Product[] = [
     createdAt: "2025-12-10",
   },
 
+  {
+    id: "prod-5b",
+    name: "ยำยำ จัมโบ้ รสต้มยำกุ้ง 67 กรัม",
+    slug: "yumyum-jumbo-tomyum-67g",
+    description:
+      "บะหมี่กึ่งสำเร็จรูป ยำยำ จัมโบ้ รสต้มยำกุ้ง ขนาด 67 กรัม ซองใหญ่เต็มอิ่ม รสชาติจัดจ้านต้นตำรับ ขายดีทั้งปลีกและส่ง",
+    images: [getPlaceholderUrl(600, 600, "Product")],
+    categoryId: "cat-1",
+    subcategoryId: "sub-1-1",
+    units: [
+      { unitType: "piece", labelTh: "ซอง", labelEn: "Pack", price: 8, conversionRate: 1, sku: "YY-JTY67-PC", stock: 1800 },
+      { unitType: "box", labelTh: "แพ็ค (6 ซอง)", labelEn: "Pack (6 packs)", price: 44, conversionRate: 6, sku: "YY-JTY67-PK", stock: 300 },
+      { unitType: "case", labelTh: "ลัง (6 แพ็ค)", labelEn: "Case (6 packs)", price: 249, compareAtPrice: 264, conversionRate: 6, sku: "YY-JTY67-CS", stock: 50 },
+    ],
+    baseUnit: "piece",
+    baseStock: 1800,
+    createdAt: "2026-01-15",
+  },
+  {
+    id: "prod-5c",
+    name: "โจ๊ก คนอร์ รสหมู 35 กรัม",
+    slug: "knorr-porridge-pork-35g",
+    description:
+      "โจ๊กคัพ คนอร์ รสหมู ขนาด 35 กรัม แค่เติมน้ำร้อน รสชาติกลมกล่อม สะดวกรวดเร็ว เหมาะสำหรับมื้อเช้าหรือของว่าง",
+    images: [getPlaceholderUrl(600, 600, "Product")],
+    categoryId: "cat-1",
+    subcategoryId: "sub-1-3",
+    units: [
+      { unitType: "piece", labelTh: "ถ้วย", labelEn: "Cup", price: 15, conversionRate: 1, sku: "KNR-PP35-PC", stock: 600 },
+      { unitType: "box", labelTh: "ลัง (12 ถ้วย)", labelEn: "Case (12 cups)", price: 165, conversionRate: 12, sku: "KNR-PP35-CS", stock: 50 },
+    ],
+    baseUnit: "piece",
+    baseStock: 600,
+    createdAt: "2026-01-18",
+  },
+  {
+    id: "prod-5d",
+    name: "เส้นหมี่ จันทร์ ขนาด 200 กรัม",
+    slug: "chan-rice-vermicelli-200g",
+    description:
+      "เส้นหมี่ ตราจันทร์ ขนาด 200 กรัม เส้นเล็กเหนียวนุ่ม ไม่เปื่อยง่าย เหมาะทำผัดหมี่ ใส่น้ำซุป หรือยำต่างๆ สินค้าขายดีประจำร้านค้า",
+    images: [getPlaceholderUrl(600, 600, "Product")],
+    categoryId: "cat-1",
+    subcategoryId: "sub-1-4",
+    units: [
+      { unitType: "piece", labelTh: "ห่อ", labelEn: "Pack", price: 18, conversionRate: 1, sku: "CHAN-RV200-PC", stock: 500 },
+      { unitType: "box", labelTh: "ลัง (30 ห่อ)", labelEn: "Case (30 packs)", price: 490, compareAtPrice: 540, conversionRate: 30, sku: "CHAN-RV200-CS", stock: 16 },
+    ],
+    baseUnit: "piece",
+    baseStock: 500,
+    createdAt: "2026-01-20",
+  },
+  {
+    id: "prod-5e",
+    name: "สปาเก็ตตี้ ควิกเชฟ 500 กรัม",
+    slug: "quick-chef-spaghetti-500g",
+    description:
+      "เส้นสปาเก็ตตี้ ตราควิกเชฟ ขนาด 500 กรัม เส้นเหนียวนุ่มอร่อย ต้มง่าย เหมาะกับซอสทุกชนิด นิยมใช้ในร้านอาหารและครัวเรือน",
+    images: [getPlaceholderUrl(600, 600, "Product")],
+    categoryId: "cat-1",
+    subcategoryId: "sub-1-5",
+    units: [
+      { unitType: "piece", labelTh: "ห่อ", labelEn: "Pack", price: 25, conversionRate: 1, sku: "QC-SP500-PC", stock: 400 },
+      { unitType: "box", labelTh: "ลัง (20 ห่อ)", labelEn: "Case (20 packs)", price: 450, compareAtPrice: 500, conversionRate: 20, sku: "QC-SP500-CS", stock: 20 },
+    ],
+    baseUnit: "piece",
+    baseStock: 400,
+    createdAt: "2026-01-22",
+  },
+
   // ─── cat-3: เครื่องดื่มและนม ─────────────────────────────────────
   {
     id: "prod-6",
@@ -169,6 +239,58 @@ export const products: Product[] = [
     baseStock: 960,
     isFeatured: true,
     createdAt: "2026-01-10",
+  },
+
+  {
+    id: "prod-9b",
+    name: "น้ำส้ม ทิปโก้ 100% 1 ลิตร",
+    slug: "tipco-orange-juice-1l",
+    description:
+      "น้ำส้มแท้ 100% ตราทิปโก้ ขนาด 1 ลิตร ไม่ผสมน้ำตาล อุดมด้วยวิตามินซี สดชื่นดื่มง่าย เหมาะสำหรับร้านอาหาร โรงแรม และจำหน่ายปลีก",
+    images: [getPlaceholderUrl(600, 600, "Product")],
+    categoryId: "cat-3",
+    subcategoryId: "sub-3-2",
+    units: [
+      { unitType: "piece", labelTh: "กล่อง", labelEn: "Box", price: 59, conversionRate: 1, sku: "TPC-OJ1L-PC", stock: 300 },
+      { unitType: "box", labelTh: "ลัง (12 กล่อง)", labelEn: "Case (12 boxes)", price: 649, compareAtPrice: 708, conversionRate: 12, sku: "TPC-OJ1L-CS", stock: 25 },
+    ],
+    baseUnit: "piece",
+    baseStock: 300,
+    createdAt: "2026-01-05",
+  },
+  {
+    id: "prod-9c",
+    name: "นมถั่วเหลือง แลคตาซอย 300ml",
+    slug: "lactasoy-soymilk-300ml",
+    description:
+      "นมถั่วเหลือง แลคตาซอย ขนาด 300 มล. รสหวาน หอมมัน อุดมด้วยโปรตีนจากถั่วเหลือง เหมาะสำหรับทุกวัย นิยมจำหน่ายในร้านสะดวกซื้อและร้านค้าปลีก",
+    images: [getPlaceholderUrl(600, 600, "Product")],
+    categoryId: "cat-3",
+    subcategoryId: "sub-3-5",
+    units: [
+      { unitType: "piece", labelTh: "กล่อง", labelEn: "Box", price: 12, conversionRate: 1, sku: "LACT-SM300-PC", stock: 1200 },
+      { unitType: "box", labelTh: "แพ็ค (36 กล่อง)", labelEn: "Pack (36 boxes)", price: 389, conversionRate: 36, sku: "LACT-SM300-BX", stock: 33 },
+    ],
+    baseUnit: "piece",
+    baseStock: 1200,
+    createdAt: "2026-01-08",
+  },
+  {
+    id: "prod-9d",
+    name: "สไปรท์ 1.25 ลิตร",
+    slug: "sprite-1250ml",
+    description:
+      "น้ำอัดลม สไปรท์ ขนาด 1.25 ลิตร ซ่าสดชื่น รสมะนาว ดื่มแล้วสดชื่นคลายร้อน เป็นเครื่องดื่มยอดนิยมในร้านอาหารและร้านค้าปลีก",
+    images: [getPlaceholderUrl(600, 600, "Product")],
+    categoryId: "cat-3",
+    subcategoryId: "sub-3-2",
+    units: [
+      { unitType: "piece", labelTh: "ขวด", labelEn: "Bottle", price: 29, conversionRate: 1, sku: "SPR-1250-PC", stock: 480 },
+      { unitType: "box", labelTh: "แพ็ค (6 ขวด)", labelEn: "Pack (6 bottles)", price: 159, conversionRate: 6, sku: "SPR-1250-BX", stock: 80 },
+    ],
+    baseUnit: "piece",
+    baseStock: 480,
+    createdAt: "2026-01-12",
   },
 
   // ─── cat-4: เครื่องปรุงรส ──────────────────────────────────────

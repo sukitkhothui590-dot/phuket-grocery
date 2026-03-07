@@ -1,5 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Flame } from "lucide-react";
+import { ArrowRight, Flame, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductCard } from "@/components/product/product-card";
 import type { Product } from "@/types";
 
@@ -9,11 +12,20 @@ interface FeaturedProductsProps {
   viewAllLink?: string;
 }
 
+const PAGE_SIZE = 10;
+
 export function FeaturedProducts({
   title,
   products,
   viewAllLink = "/categories",
 }: FeaturedProductsProps) {
+  const [page, setPage] = useState(0);
+  const totalPages = Math.ceil(products.length / PAGE_SIZE);
+  const currentProducts = products.slice(
+    page * PAGE_SIZE,
+    page * PAGE_SIZE + PAGE_SIZE
+  );
+
   if (products.length === 0) return null;
 
   return (
@@ -30,16 +42,41 @@ export function FeaturedProducts({
             </p>
           </div>
         </div>
-        <Link
-          href={viewAllLink}
-          className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
-        >
-          ดูทั้งหมด
-          <ArrowRight className="h-4 w-4" />
-        </Link>
+
+        <div className="flex items-center gap-2">
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="flex h-8 w-8 items-center justify-center rounded-full border bg-white text-slate-600 transition-colors hover:bg-muted disabled:opacity-30 disabled:hover:bg-white"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="min-w-[3rem] text-center text-xs text-muted-foreground">
+                {page + 1} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                disabled={page === totalPages - 1}
+                className="flex h-8 w-8 items-center justify-center rounded-full border bg-white text-slate-600 transition-colors hover:bg-muted disabled:opacity-30 disabled:hover:bg-white"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          <Link
+            href={viewAllLink}
+            className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            ดูทั้งหมด
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-        {products.map((product) => (
+        {currentProducts.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>

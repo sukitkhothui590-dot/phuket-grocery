@@ -1,7 +1,9 @@
+"use client";
+
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductCard } from "@/components/product/product-card";
-import { getPlaceholderUrl } from "@/lib/placeholder";
 import type { Product, Category } from "@/types";
 
 interface CategoryProductSectionProps {
@@ -13,7 +15,30 @@ export function CategoryProductSection({
   category,
   products,
 }: CategoryProductSectionProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(false);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setAtStart(el.scrollLeft <= 2);
+    setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+  };
+
+  const scroll = (dir: "left" | "right") => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.8;
+    el.scrollBy({
+      left: dir === "left" ? -amount : amount,
+      behavior: "smooth",
+    });
+  };
+
   if (products.length === 0) return null;
+
+  const hasOverflow = products.length > 5;
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-4">
@@ -44,21 +69,42 @@ export function CategoryProductSection({
             ดูทั้งหมด
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
-
-          <img
-            src={getPlaceholderUrl(96, 96)}
-            alt=""
-            className="absolute bottom-0 right-0 hidden h-24 w-24 object-cover opacity-10 lg:block"
-          />
         </div>
 
-        {/* Product grid */}
-        <div className="flex-1 bg-white p-4">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        {/* Product scroll area */}
+        <div className="relative flex-1 overflow-hidden bg-white p-4">
+          {hasOverflow && !atStart && (
+            <button
+              onClick={() => scroll("left")}
+              className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-white shadow-md transition-colors hover:bg-muted"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          )}
+
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="scrollbar-hide flex gap-5 overflow-x-auto scroll-smooth"
+          >
             {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <div
+                key={product.id}
+                className="w-[180px] flex-shrink-0 sm:w-[200px] lg:w-[190px] xl:w-[195px]"
+              >
+                <ProductCard product={product} />
+              </div>
             ))}
           </div>
+
+          {hasOverflow && !atEnd && (
+            <button
+              onClick={() => scroll("right")}
+              className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-white shadow-md transition-colors hover:bg-muted"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
     </section>
