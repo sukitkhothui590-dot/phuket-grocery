@@ -29,7 +29,7 @@ export function NewsSection({ posts }: NewsSectionProps) {
             <Card className="overflow-hidden transition-shadow hover:shadow-md">
               <div className="aspect-video overflow-hidden bg-muted">
                 <img
-                  src={getPlaceholderUrl(400, 225, post.title)}
+                  src={getPlaceholderUrl(400, 225)}
                   alt={post.title}
                   className="h-full w-full object-cover"
                 />

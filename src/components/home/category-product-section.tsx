@@ -43,10 +43,10 @@ export function CategoryProductSection({
   return (
     <section className="mx-auto max-w-7xl px-4 py-4">
       <div className="flex flex-col overflow-hidden rounded-lg border lg:flex-row">
-        {/* Sidebar */}
-        <div className="relative flex w-full flex-col justify-between bg-slate-800 p-5 text-white lg:w-[220px] lg:flex-shrink-0">
-          <div>
-            <h3 className="text-lg font-bold">{category.name}</h3>
+        {/* Sidebar - compact horizontal bar on mobile, full sidebar on desktop */}
+        <div className="flex w-full items-center justify-between bg-slate-800 px-4 py-3 text-white lg:w-[220px] lg:flex-shrink-0 lg:flex-col lg:items-start lg:justify-between lg:p-5">
+          <div className="lg:w-full">
+            <h3 className="text-base font-bold lg:text-lg">{category.name}</h3>
             <ul className="mt-3 hidden space-y-1.5 lg:block">
               {category.subcategories.slice(0, 5).map((sub) => (
                 <li key={sub.id}>
@@ -64,7 +64,7 @@ export function CategoryProductSection({
 
           <Link
             href={`/categories/${category.slug}`}
-            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary/50 transition-colors hover:text-white"
+            className="inline-flex items-center gap-1 text-sm font-medium text-primary/50 transition-colors hover:text-white lg:mt-4"
           >
             ดูทั้งหมด
             <ArrowRight className="h-3.5 w-3.5" />

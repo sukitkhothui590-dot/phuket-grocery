@@ -22,7 +22,7 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent side="left" className="w-80 p-0">
+      <SheetContent side="left" className="w-80 p-0" showCloseButton={false}>
         <SheetHeader className="border-b p-4">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-lg font-bold text-primary">

@@ -86,8 +86,8 @@ export function ProductCard({ product }: ProductCardProps) {
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
         />
 
-        {/* Add to cart overlay */}
-        <div className="absolute inset-x-0 bottom-0 translate-y-full bg-primary/90 py-2 text-center text-sm font-medium text-white transition-transform duration-300 group-hover:translate-y-0">
+        {/* Desktop: slide-up add-to-cart overlay on hover */}
+        <div className="absolute inset-x-0 bottom-0 hidden translate-y-full bg-primary/90 py-2 text-center text-sm font-medium text-white transition-transform duration-300 group-hover:translate-y-0 sm:block">
           <button
             onClick={handleAddToCart}
             className="inline-flex items-center gap-1.5"
@@ -96,6 +96,14 @@ export function ProductCard({ product }: ProductCardProps) {
             เพิ่มลงตะกร้า
           </button>
         </div>
+
+        {/* Mobile: persistent cart icon button */}
+        <button
+          onClick={handleAddToCart}
+          className="absolute bottom-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white shadow-md sm:hidden"
+        >
+          <ShoppingCart className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Info */}
