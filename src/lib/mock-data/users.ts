@@ -1,0 +1,60 @@
+import type { User } from "@/types";
+
+export const users: User[] = [
+  {
+    id: "user-1",
+    email: "somchai@example.com",
+    phone: "089-123-4567",
+    firstName: "สมชาย",
+    lastName: "ใจดี",
+    addresses: [
+      {
+        id: "addr-1",
+        label: "ร้านค้า",
+        fullName: "สมชาย ใจดี",
+        phone: "089-123-4567",
+        addressLine1: "123/45 ถ.เทพกระษัตรี",
+        district: "เมืองภูเก็ต",
+        subDistrict: "รัษฎา",
+        province: "ภูเก็ต",
+        postalCode: "83000",
+        isDefault: true,
+      },
+      {
+        id: "addr-2",
+        label: "บ้าน",
+        fullName: "สมชาย ใจดี",
+        phone: "089-123-4567",
+        addressLine1: "88/9 ซ.วิชิต 5",
+        district: "เมืองภูเก็ต",
+        subDistrict: "วิชิต",
+        province: "ภูเก็ต",
+        postalCode: "83000",
+        isDefault: false,
+      },
+    ],
+    createdAt: "2026-01-15",
+  },
+  {
+    id: "user-2",
+    email: "wipa@example.com",
+    phone: "086-987-6543",
+    firstName: "วิภา",
+    lastName: "รักดี",
+    addresses: [
+      {
+        id: "addr-3",
+        label: "ร้านกาแฟ",
+        fullName: "วิภา รักดี",
+        phone: "086-987-6543",
+        addressLine1: "55/2 ถ.ถลาง",
+        district: "เมืองภูเก็ต",
+        subDistrict: "ตลาดใหญ่",
+        province: "ภูเก็ต",
+        postalCode: "83000",
+        isDefault: true,
+      },
+    ],
+    createdAt: "2026-02-01",
+  },
+];
