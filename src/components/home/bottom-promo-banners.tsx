@@ -44,11 +44,6 @@ export function BottomPromoBanners() {
               ดูเพิ่มเติม
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </span>
-            <img
-              src={getPlaceholderUrl(120, 120)}
-              alt=""
-              className="absolute -bottom-2 -right-2 h-24 w-24 rounded-lg object-cover opacity-10"
-            />
           </Link>
         ))}
       </div>

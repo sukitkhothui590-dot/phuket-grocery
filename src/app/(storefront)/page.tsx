@@ -3,7 +3,6 @@ import { PromotionGrid } from "@/components/home/promotion-grid";
 import { CategoryGrid } from "@/components/home/category-grid";
 import { FeaturedProducts } from "@/components/home/featured-products";
 import { CategoryProductSection } from "@/components/home/category-product-section";
-import { BottomPromoBanners } from "@/components/home/bottom-promo-banners";
 import { TrustBadges } from "@/components/home/trust-badges";
 import { GoogleReviews } from "@/components/home/google-reviews";
 import { NewsSection } from "@/components/home/news-section";
@@ -44,7 +43,6 @@ export default async function HomePage() {
         />
       ))}
 
-      <BottomPromoBanners />
       <TrustBadges />
       <GoogleReviews reviews={reviews} />
       <NewsSection posts={posts} />
