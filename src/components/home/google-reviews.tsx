@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 interface GoogleReviewsProps {
   reviews: GoogleReview[];
+  reviewLink?: string;
 }
 
 function ReviewCard({ review }: { review: GoogleReview }) {
@@ -42,10 +43,31 @@ function ReviewCard({ review }: { review: GoogleReview }) {
   );
 }
 
-export function GoogleReviews({ reviews }: GoogleReviewsProps) {
-  if (reviews.length === 0) return null;
+export function GoogleReviews({ reviews, reviewLink }: GoogleReviewsProps) {
+  const link = reviewLink ?? "#";
 
   const mobileReviews = reviews.slice(0, 3);
+
+  if (reviews.length === 0) {
+    return (
+      <section className="bg-muted/50 py-10">
+        <div className="mx-auto max-w-7xl px-4 text-center">
+          <h2 className="text-xl font-bold text-foreground">รีวิวจากลูกค้า</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            ดูรีวิวและคะแนนจากลูกค้าของเราบน Google
+          </p>
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex text-sm text-primary hover:underline"
+          >
+            ดูรีวิวทั้งหมดบน Google &rarr;
+          </a>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="bg-muted/50 py-10">
@@ -75,7 +97,7 @@ export function GoogleReviews({ reviews }: GoogleReviewsProps) {
 
         <div className="mt-6 text-center">
           <a
-            href="#"
+            href={link}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-primary hover:underline"

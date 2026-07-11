@@ -1,17 +1,14 @@
 import type { Metadata } from "next";
-import { Inter, Noto_Sans_Thai } from "next/font/google";
+import { Noto_Sans_Thai } from "next/font/google";
 import { Header, Footer } from "@/components/layout";
+import { AppProviders } from "@/components/providers/app-providers";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
+import { getCategories } from "@/lib/api/products";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-sans",
-  subsets: ["latin"],
-});
-
 const notoSansThai = Noto_Sans_Thai({
-  variable: "--font-thai",
-  subsets: ["thai"],
+  variable: "--font-sans",
+  subsets: ["latin", "thai"],
   weight: ["300", "400", "500", "600", "700"],
 });
 
@@ -21,23 +18,30 @@ export const metadata: Metadata = {
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const categories = await getCategories();
+
   return (
     <html lang="th">
-      <body
-        className={`${inter.variable} ${notoSansThai.variable} font-sans antialiased`}
-      >
-        <div className="flex min-h-screen flex-col">
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
+      <body className={`${notoSansThai.variable} font-sans antialiased`}>
+        <AppProviders>
+          <div className="flex min-h-screen flex-col">
+            <Header categories={categories} />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+        </AppProviders>
       </body>
     </html>
   );

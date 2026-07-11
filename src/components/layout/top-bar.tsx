@@ -4,18 +4,32 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { COMPANY_INFO } from "@/lib/constants";
+import { getStoreSettings } from "@/lib/api/settings";
 import { useAuthStore } from "@/stores/auth-store";
+import { signOut } from "@/lib/auth-actions";
 import { User, LogOut } from "lucide-react";
 
 export function TopBar() {
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const [mounted, setMounted] = useState(false);
+  const [storeName, setStoreName] = useState<string>(COMPANY_INFO.shortName);
+  const [workingHours, setWorkingHours] = useState<string>(
+    COMPANY_INFO.workingHours,
+  );
 
   useEffect(() => setMounted(true), []);
 
-  const handleLogout = () => {
-    logout();
+  useEffect(() => {
+    void (async () => {
+      const settings = await getStoreSettings();
+      setStoreName(settings.storeName || COMPANY_INFO.shortName);
+      setWorkingHours(settings.workingHours || COMPANY_INFO.workingHours);
+    })();
+  }, []);
+
+  const handleLogout = async () => {
+    await signOut();
     router.push("/");
   };
 
@@ -23,8 +37,7 @@ export function TopBar() {
     <div className="bg-slate-900 text-slate-300">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-1.5 text-xs">
         <span className="hidden sm:inline">
-          ยินดีต้อนรับสู่ {COMPANY_INFO.shortName} |{" "}
-          {COMPANY_INFO.workingHours}
+          ยินดีต้อนรับสู่ {storeName} | {workingHours}
         </span>
         <div className="flex w-full items-center justify-end gap-2 sm:w-auto sm:gap-3">
           <Link

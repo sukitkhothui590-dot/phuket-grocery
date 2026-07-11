@@ -1,19 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Minus, Plus, Trash2, ShoppingBag, Tag } from "lucide-react";
+import { Minus, Plus, ShoppingBag, Store, Tag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { CouponPicker } from "@/components/coupon/coupon-picker";
 import { useCartStore } from "@/stores/cart-store";
+import { useAuthStore } from "@/stores/auth-store";
+import {
+  changeCartUnit,
+  removeFromCart,
+  setCartQuantity,
+} from "@/lib/cart-actions";
 import { validateCoupon } from "@/lib/api/orders";
+import { getProductById } from "@/lib/api/products";
+import { COMPANY_INFO } from "@/lib/constants";
 import { getPlaceholderUrl } from "@/lib/placeholder";
-import { products as allProducts } from "@/lib/mock-data";
-import type { ProductUnit } from "@/types";
+import type { Product, ProductUnit } from "@/types";
 
-function getProductUnits(productId: string): ProductUnit[] {
-  return allProducts.find((p) => p.id === productId)?.units ?? [];
+function getProductUnits(product?: Product): ProductUnit[] {
+  return product?.units ?? [];
+}
+
+function getSelectionKey(productId: string, sku: string) {
+  return `${productId}-${sku}`;
 }
 
 export default function CartPage() {
@@ -21,34 +31,134 @@ export default function CartPage() {
     items,
     coupon,
     discount,
-    updateQuantity,
-    updateUnit,
-    removeItem,
     applyCoupon,
     removeCoupon,
-    getSubtotal,
-    getTotal,
   } = useCartStore();
+  const accessToken = useAuthStore((state) => state.accessToken);
 
-  const [couponCode, setCouponCode] = useState("");
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
+  const [couponPickerOpen, setCouponPickerOpen] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [productCache, setProductCache] = useState<Record<string, Product>>({});
 
-  const subtotal = getSubtotal();
-  const total = getTotal();
+  useEffect(() => {
+    const nextKeys = items.map((item) =>
+      getSelectionKey(item.productId, item.selectedUnit.sku)
+    );
 
-  const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return;
+    setSelectedKeys((current) => {
+      const filtered = current.filter((key) => nextKeys.includes(key));
+      return filtered.length > 0 ? filtered : nextKeys;
+    });
+  }, [items]);
+
+  useEffect(() => {
+    async function loadProducts() {
+      const uniqueIds = [...new Set(items.map((item) => item.productId))];
+
+      const entries = await Promise.all(
+        uniqueIds.map(async (productId) => {
+          const product = await getProductById(productId);
+          return product ? ([productId, product] as const) : null;
+        }),
+      );
+
+      const nextEntries = entries.filter(
+        (entry): entry is readonly [string, Product] => entry !== null,
+      );
+
+      if (nextEntries.length > 0) {
+        setProductCache((current) => {
+          const updates = Object.fromEntries(
+            nextEntries.filter(([productId]) => !current[productId]),
+          );
+
+          if (Object.keys(updates).length === 0) {
+            return current;
+          }
+
+          return { ...current, ...updates };
+        });
+      }
+    }
+
+    void loadProducts();
+  }, [items]);
+
+  const selectedItems = items.filter((item) =>
+    selectedKeys.includes(getSelectionKey(item.productId, item.selectedUnit.sku))
+  );
+  const selectedCount = selectedItems.length;
+  const allSelected = items.length > 0 && selectedCount === items.length;
+  const subtotal = selectedItems.reduce(
+    (sum, item) => sum + item.selectedUnit.price * item.quantity,
+    0
+  );
+  const appliedDiscount = coupon ? Math.min(discount, subtotal) : 0;
+  const total = Math.max(0, subtotal - appliedDiscount);
+
+  const toggleItemSelection = (productId: string, sku: string) => {
+    const key = getSelectionKey(productId, sku);
+    setSelectedKeys((current) =>
+      current.includes(key)
+        ? current.filter((itemKey) => itemKey !== key)
+        : [...current, key]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedKeys([]);
+      return;
+    }
+
+    setSelectedKeys(
+      items.map((item) => getSelectionKey(item.productId, item.selectedUnit.sku))
+    );
+  };
+
+  const handleApplyCoupon = async (code: string) => {
+    const trimmed = code.trim();
+    if (!trimmed) return;
+
     setCouponLoading(true);
     setCouponError("");
 
-    const result = await validateCoupon(couponCode.trim(), subtotal);
-    if (result.valid && result.coupon) {
-      applyCoupon(result.coupon, subtotal);
-      setCouponCode("");
-    } else {
-      setCouponError(result.error ?? "โค้ดไม่ถูกต้อง");
+    if (selectedItems.length === 0) {
+      setCouponError("กรุณาเลือกสินค้าก่อนใช้โค้ดส่วนลด");
+      setCouponLoading(false);
+      return;
     }
+
+    const couponItems = selectedItems
+      .filter((item) => item.selectedUnit.id)
+      .map((item) => ({
+        productId: item.productId,
+        unitId: item.selectedUnit.id!,
+        quantity: item.quantity,
+      }));
+
+    if (couponItems.length === 0) {
+      setCouponError("ไม่พบหน่วยสินค้าสำหรับตรวจสอบโค้ด กรุณาลองเพิ่มสินค้าใหม่");
+      setCouponLoading(false);
+      return;
+    }
+
+    const result = await validateCoupon(
+      trimmed,
+      subtotal,
+      couponItems,
+      accessToken,
+    );
+    if (result.valid && result.coupon) {
+      applyCoupon(result.coupon, subtotal, result.discount);
+      setCouponPickerOpen(false);
+      setCouponError("");
+    } else {
+      setCouponError(result.error ?? "โค้ดส่วนลดไม่ถูกต้อง");
+    }
+
     setCouponLoading(false);
   };
 
@@ -60,7 +170,11 @@ export default function CartPage() {
         <p className="mt-2 text-sm text-muted-foreground">
           คุณยังไม่มีสินค้าในตะกร้า
         </p>
-        <Button className="mt-6" nativeButton={false} render={<Link href="/categories" />}>
+        <Button
+          className="mt-6"
+          nativeButton={false}
+          render={<Link href="/categories" />}
+        >
           เลือกซื้อสินค้า
         </Button>
       </div>
@@ -68,214 +182,373 @@ export default function CartPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-6">
-      <h1 className="text-2xl font-bold text-foreground">ตะกร้าสินค้า</h1>
-      <p className="mt-1 text-sm text-muted-foreground">{items.length} รายการ</p>
+    <div className="bg-[#f5f5f5] pb-28">
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <div className="hidden rounded-sm border border-slate-200 bg-white px-4 py-4 text-sm text-slate-500 shadow-[0_1px_1px_rgba(15,23,42,0.03)] lg:grid lg:grid-cols-[48px_minmax(0,1fr)_140px_170px_140px_120px] lg:items-center">
+          <div>
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleSelectAll}
+              aria-label="เลือกสินค้าทั้งหมด"
+            />
+          </div>
+          <div>สินค้า</div>
+          <div className="text-center">ราคาต่อชิ้น</div>
+          <div className="text-center">จำนวน</div>
+          <div className="text-center">ราคารวม</div>
+          <div className="text-center">แอ็กชัน</div>
+        </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
-        {/* Cart Items */}
-        <div className="space-y-3">
+        <div className="mt-4 space-y-4">
           {items.map((item) => {
-            const availableUnits = getProductUnits(item.productId);
+            const product = productCache[item.productId];
+            const availableUnits = getProductUnits(product);
             const itemSubtotal = item.selectedUnit.price * item.quantity;
+            const selected = selectedKeys.includes(
+              getSelectionKey(item.productId, item.selectedUnit.sku)
+            );
 
             return (
-              <div
-                key={`${item.productId}-${item.selectedUnit.sku}`}
-                className="flex gap-4 rounded-lg border bg-white p-4"
+              <section
+                key={getSelectionKey(item.productId, item.selectedUnit.sku)}
+                className="overflow-hidden rounded-sm border border-slate-200 bg-white shadow-[0_1px_1px_rgba(15,23,42,0.03)]"
               >
-                <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-md bg-muted">
-                  <img
-                    src={
-                      item.productImage ||
-                      getPlaceholderUrl(80, 80, item.productName)
+                <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-4">
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() =>
+                      toggleItemSelection(item.productId, item.selectedUnit.sku)
                     }
-                    alt={item.productName}
-                    className="h-full w-full object-cover"
+                    aria-label={`เลือกสินค้า ${item.productName}`}
                   />
+                  <Store className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">
+                    {COMPANY_INFO.shortName}
+                  </span>
                 </div>
 
-                <div className="flex flex-1 flex-col gap-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="line-clamp-2 text-sm font-medium text-foreground">
-                      {item.productName}
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        removeItem(item.productId, item.selectedUnit.sku)
+                <div className="grid gap-4 px-4 py-6 lg:grid-cols-[48px_minmax(0,1fr)_140px_170px_140px_120px] lg:items-center">
+                  <div className="hidden lg:flex lg:justify-center">
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() =>
+                        toggleItemSelection(item.productId, item.selectedUnit.sku)
                       }
-                      className="flex-shrink-0 text-muted-foreground transition-colors hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                      aria-label={`เลือกสินค้า ${item.productName}`}
+                    />
                   </div>
 
-                  {/* Unit selector dropdown */}
-                  {availableUnits.length > 1 ? (
-                    <select
-                      value={item.selectedUnit.sku}
-                      onChange={(e) => {
-                        const newUnit = availableUnits.find(
-                          (u) => u.sku === e.target.value
-                        );
-                        if (newUnit)
-                          updateUnit(
-                            item.productId,
-                            item.selectedUnit.sku,
-                            newUnit
-                          );
-                      }}
-                      className="h-7 w-fit rounded-md border border-input bg-white px-2 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    >
-                      {availableUnits.map((u) => (
-                        <option key={u.sku} value={u.sku}>
-                          {u.labelTh} — ฿{u.price.toLocaleString()}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      {item.selectedUnit.labelTh}
-                    </span>
-                  )}
+                  <div className="flex gap-4">
+                    <div className="h-24 w-24 flex-shrink-0 overflow-hidden border border-slate-200 bg-muted">
+                      <img
+                        src={
+                          item.productImage ||
+                          getPlaceholderUrl(96, 96, item.productName)
+                        }
+                        alt={item.productName}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
 
-                  {/* Quantity & Subtotal */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={product ? `/products/${product.slug}` : "/categories"}
+                        className="line-clamp-2 text-sm font-medium leading-6 text-foreground hover:text-primary"
+                      >
+                        {item.productName}
+                      </Link>
+
+                      {(item.sourceLabel ||
+                        item.promoDiscountPercent ||
+                        item.promoSavedAmount) && (
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          {item.sourceLabel && (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                              <Tag className="h-3 w-3" />
+                              จาก {item.sourceLabel}
+                            </span>
+                          )}
+                          {typeof item.promoDiscountPercent === "number" && (
+                            <span className="inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-[11px] font-bold text-destructive ring-1 ring-destructive/10">
+                              ลด {item.promoDiscountPercent}%
+                            </span>
+                          )}
+                          {typeof item.promoSavedAmount === "number" &&
+                            item.promoSavedAmount > 0 && (
+                              <span className="text-[11px] font-medium text-destructive">
+                                ประหยัด ฿
+                                {(
+                                  item.promoSavedAmount * item.quantity
+                                ).toLocaleString()}
+                              </span>
+                            )}
+                        </div>
+                      )}
+
+                      {availableUnits.length > 1 ? (
+                        <div className="mt-3">
+                          <label className="text-xs text-muted-foreground">
+                            ตัวเลือกสินค้า
+                          </label>
+                          <select
+                            value={item.selectedUnit.sku}
+                            onChange={(e) => {
+                              const newUnit = availableUnits.find(
+                                (unit) => unit.sku === e.target.value
+                              );
+                              if (newUnit) {
+                                void changeCartUnit(
+                                  item.productId,
+                                  item.selectedUnit.sku,
+                                  newUnit,
+                                  item.quantity,
+                                );
+                              }
+                            }}
+                            className="mt-1 block h-9 w-full max-w-[240px] rounded-sm border border-slate-300 bg-white px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                          >
+                            {availableUnits.map((unit) => (
+                              <option key={unit.sku} value={unit.sku}>
+                                {unit.labelTh} - ฿{unit.price.toLocaleString()}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          {item.selectedUnit.labelTh}
+                        </p>
+                      )}
+
+                      <p className="mt-2 text-xs text-[#ee4d2d]">
+                        เหลือสินค้าอยู่ {item.selectedUnit.stock} ชิ้น
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm lg:block lg:text-center">
+                    <span className="text-muted-foreground lg:hidden">ราคาต่อชิ้น</span>
+                    <div className="lg:flex lg:flex-col lg:items-center">
+                      <span className="text-foreground">
+                        ฿{item.selectedUnit.price.toLocaleString()}
+                      </span>
+                      {item.selectedUnit.compareAtPrice &&
+                        item.selectedUnit.compareAtPrice >
+                          item.selectedUnit.price && (
+                          <span className="text-xs text-muted-foreground line-through">
+                            ฿
+                            {item.selectedUnit.compareAtPrice.toLocaleString()}
+                          </span>
+                        )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between lg:justify-center">
+                    <span className="text-sm text-muted-foreground lg:hidden">จำนวน</span>
+                    <div className="flex items-center">
                       <button
                         type="button"
                         onClick={() =>
-                          updateQuantity(
+                          void setCartQuantity(
                             item.productId,
                             item.selectedUnit.sku,
-                            item.quantity - 1
+                            item.quantity - 1,
+                            item.selectedUnit.id,
                           )
                         }
-                        className="flex h-7 w-7 items-center justify-center rounded-md border border-input transition-colors hover:bg-muted"
+                        className="flex h-9 w-9 items-center justify-center border border-slate-300 text-slate-600 transition-colors hover:bg-slate-50"
                       >
-                        <Minus className="h-3 w-3" />
+                        <Minus className="h-4 w-4" />
                       </button>
                       <input
                         type="number"
                         min={1}
                         value={item.quantity}
                         onChange={(e) =>
-                          updateQuantity(
+                          void setCartQuantity(
                             item.productId,
                             item.selectedUnit.sku,
-                            Number(e.target.value) || 1
+                            Number(e.target.value) || 1,
+                            item.selectedUnit.id,
                           )
                         }
-                        className="h-7 w-12 rounded-md border border-input bg-transparent text-center text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        className="h-9 w-12 border-y border-slate-300 text-center text-sm outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                       <button
                         type="button"
                         onClick={() =>
-                          updateQuantity(
+                          void setCartQuantity(
                             item.productId,
                             item.selectedUnit.sku,
-                            item.quantity + 1
+                            item.quantity + 1,
+                            item.selectedUnit.id,
                           )
                         }
-                        className="flex h-7 w-7 items-center justify-center rounded-md border border-input transition-colors hover:bg-muted"
+                        className="flex h-9 w-9 items-center justify-center border border-slate-300 text-slate-600 transition-colors hover:bg-slate-50"
                       >
-                        <Plus className="h-3 w-3" />
+                        <Plus className="h-4 w-4" />
                       </button>
                     </div>
-                    <span className="text-sm font-semibold text-foreground">
+                  </div>
+
+                  <div className="flex items-center justify-between lg:block lg:text-center">
+                    <span className="text-sm text-muted-foreground lg:hidden">ราคารวม</span>
+                    <span className="text-base font-semibold text-destructive">
                       ฿{itemSubtotal.toLocaleString()}
                     </span>
                   </div>
+
+                  <div className="flex items-center justify-between lg:flex-col lg:gap-2">
+                    <span className="text-sm text-muted-foreground lg:hidden">แอ็กชัน</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void removeFromCart(
+                          item.productId,
+                          item.selectedUnit.sku,
+                          item.selectedUnit.id,
+                        )
+                      }
+                      className="inline-flex items-center gap-1 text-sm text-slate-500 transition-colors hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      ลบ
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </section>
             );
           })}
-        </div>
 
-        {/* Order Summary */}
-        <div className="h-fit space-y-4 rounded-lg border bg-white p-5">
-          <h2 className="text-lg font-bold text-foreground">สรุปคำสั่งซื้อ</h2>
-
-          {/* Coupon */}
-          <div className="space-y-2">
-            {coupon ? (
-              <div className="flex items-center justify-between rounded-md bg-green-50 px-3 py-2">
-                <div className="flex items-center gap-1.5">
-                  <Tag className="h-3.5 w-3.5 text-green-600" />
-                  <span className="text-sm font-medium text-green-700">
-                    {coupon.code}
-                  </span>
+          <section className="overflow-hidden rounded-sm border border-slate-200 bg-white shadow-[0_1px_1px_rgba(15,23,42,0.03)]">
+            <div className="bg-[#fcfcfc] px-4 py-4 text-sm">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-center gap-2 text-foreground">
+                  <Tag className="h-4 w-4 text-destructive" />
+                  <span className="font-medium">โค้ดส่วนลด / คูปอง</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={removeCoupon}
-                  className="text-xs text-muted-foreground transition-colors hover:text-destructive"
-                >
-                  ลบ
-                </button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <Input
-                  value={couponCode}
-                  onChange={(e) => {
-                    setCouponCode(e.target.value);
-                    if (couponError) setCouponError("");
-                  }}
-                  placeholder="โค้ดส่วนลด"
-                  className="h-8 text-sm"
-                  onKeyDown={(e) => e.key === "Enter" && handleApplyCoupon()}
-                />
-                <Button
-                  variant="outline"
-                  onClick={handleApplyCoupon}
-                  disabled={couponLoading}
-                >
-                  {couponLoading ? "..." : "ใช้โค้ด"}
-                </Button>
-              </div>
-            )}
-            {couponError && (
-              <p className="text-xs text-destructive">{couponError}</p>
-            )}
-          </div>
 
-          <Separator />
+                {coupon ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700">
+                      ใช้งานโค้ด {coupon.code}
+                      {appliedDiscount > 0
+                        ? ` (−฿${appliedDiscount.toLocaleString()})`
+                        : ""}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setCouponPickerOpen(true)}
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      เปลี่ยน
+                    </button>
+                    <button
+                      type="button"
+                      onClick={removeCoupon}
+                      className="text-xs text-slate-500 transition-colors hover:text-destructive"
+                    >
+                      ลบคูปอง
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="h-9 border-primary/30 text-primary hover:bg-primary/5"
+                      onClick={() => {
+                        setCouponError("");
+                        setCouponPickerOpen(true);
+                      }}
+                    >
+                      เลือกคูปอง / ใส่โค้ด
+                    </Button>
+                    <Link
+                      href="/coupons"
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      เก็บคูปอง
+                    </Link>
+                  </div>
+                )}
+              </div>
 
-          {/* Totals */}
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">ยอดรวมสินค้า</span>
-              <span className="text-foreground">
-                ฿{subtotal.toLocaleString()}
-              </span>
+              {couponError && !couponPickerOpen && (
+                <p className="mt-2 text-xs text-destructive">{couponError}</p>
+              )}
             </div>
-            {discount > 0 && (
-              <div className="flex justify-between text-green-600">
-                <span>ส่วนลด</span>
-                <span>-฿{discount.toLocaleString()}</span>
-              </div>
-            )}
-          </div>
-
-          <Separator />
-
-          <div className="flex justify-between text-base font-bold">
-            <span>ยอดสุทธิ</span>
-            <span className="text-primary">฿{total.toLocaleString()}</span>
-          </div>
-
-          <Button
-            className="w-full"
-            size="lg"
-            nativeButton={false}
-            render={<Link href="/checkout" />}
-          >
-            ดำเนินการสั่งซื้อ
-          </Button>
+          </section>
         </div>
       </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 shadow-[0_-6px_24px_rgba(15,23,42,0.06)] backdrop-blur">
+        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-6">
+            <label className="flex items-center gap-3 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleSelectAll}
+                aria-label="เลือกสินค้าทั้งหมด"
+              />
+              <span>เลือกทั้งหมด ({items.length})</span>
+            </label>
+
+            <button
+              type="button"
+              onClick={() => {
+                selectedItems.forEach((item) => {
+                  void removeFromCart(
+                    item.productId,
+                    item.selectedUnit.sku,
+                    item.selectedUnit.id,
+                  );
+                });
+              }}
+              className="text-sm text-slate-500 transition-colors hover:text-destructive"
+            >
+              ลบสินค้าที่เลือก
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:gap-6">
+            <div className="text-right text-sm">
+              <p className="text-muted-foreground">
+                รวม ({selectedCount} สินค้า)
+                {appliedDiscount > 0 && (
+                  <span className="ml-2 text-green-600">
+                    ลดแล้ว ฿{appliedDiscount.toLocaleString()}
+                  </span>
+                )}
+              </p>
+              <p className="text-2xl font-bold text-destructive">
+                ฿{total.toLocaleString()}
+              </p>
+            </div>
+
+            <Button
+              size="lg"
+              className="h-12 min-w-[220px] rounded-sm bg-destructive text-base font-semibold text-white hover:bg-destructive/90"
+              nativeButton={false}
+              render={<Link href="/checkout" />}
+            >
+              สั่งสินค้า
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <CouponPicker
+        open={couponPickerOpen}
+        onClose={() => setCouponPickerOpen(false)}
+        onApplyCode={handleApplyCoupon}
+        loading={couponLoading}
+        error={couponError}
+        appliedCode={coupon?.code}
+      />
     </div>
   );
 }

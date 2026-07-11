@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import type { BlogPost } from "@/types";
-import { getPlaceholderUrl } from "@/lib/placeholder";
 
 interface NewsSectionProps {
   posts: BlogPost[];
@@ -29,7 +28,7 @@ export function NewsSection({ posts }: NewsSectionProps) {
             <Card className="overflow-hidden transition-shadow hover:shadow-md">
               <div className="aspect-video overflow-hidden bg-muted">
                 <img
-                  src={getPlaceholderUrl(400, 225)}
+                  src={post.coverImage}
                   alt={post.title}
                   className="h-full w-full object-cover"
                 />

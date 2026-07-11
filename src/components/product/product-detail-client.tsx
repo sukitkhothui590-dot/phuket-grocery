@@ -20,7 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { UnitSelector } from "@/components/product/unit-selector";
 import { ProductCard } from "@/components/product/product-card";
-import { useCartStore } from "@/stores/cart-store";
+import { ProductReviews } from "@/components/product/product-reviews";
+import { addToCart } from "@/lib/cart-actions";
 import { getPlaceholderUrl } from "@/lib/placeholder";
 import type { Product, ProductUnit } from "@/types";
 
@@ -46,7 +47,6 @@ export function ProductDetailClient({
   const [activeTab, setActiveTab] = useState<"desc" | "info" | "review">(
     "desc"
   );
-  const addItem = useCartStore((s) => s.addItem);
 
   const baseImages =
     product.images.length > 0
@@ -78,8 +78,8 @@ export function ProductDetailClient({
       )
     : 0;
 
-  const handleAddToCart = () => {
-    addItem({
+  const handleAddToCart = async () => {
+    await addToCart({
       productId: product.id,
       productName: product.name,
       productImage: images[0],
@@ -451,9 +451,7 @@ export function ProductDetailClient({
           )}
 
           {activeTab === "review" && (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              ยังไม่มีรีวิวสำหรับสินค้านี้
-            </div>
+            <ProductReviews productSlug={product.slug} />
           )}
         </div>
       </div>

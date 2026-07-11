@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/stores/cart-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { signOut } from "@/lib/auth-actions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,35 +23,43 @@ import {
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { COMPANY_INFO } from "@/lib/constants";
+import { getStoreSettings } from "@/lib/api/settings";
 
 interface MainHeaderProps {
   onMenuOpen: () => void;
   onCategoryDrawerOpen: () => void;
 }
 
-export function MainHeader({ onMenuOpen, onCategoryDrawerOpen }: MainHeaderProps) {
+export function MainHeader({
+  onMenuOpen,
+  onCategoryDrawerOpen,
+}: MainHeaderProps) {
   const [mounted, setMounted] = useState(false);
+  const [storePhone, setStorePhone] = useState<string>(COMPANY_INFO.mobile);
   useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    void (async () => {
+      const settings = await getStoreSettings();
+      setStorePhone(settings.storePhone || COMPANY_INFO.mobile);
+    })();
+  }, []);
 
   const itemCount = useCartStore((s) => s.getItemCount());
   const subtotal = useCartStore((s) => s.getSubtotal());
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(
-        `/categories?search=${encodeURIComponent(searchQuery.trim())}`
-      );
+      router.push(`/categories?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
 
   return (
-    <div className="bg-[#01A1AF]">
+    <div className="bg-primary">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 lg:gap-4">
-        {/* Mobile menu */}
         <button
           className="inline-flex h-9 w-9 items-center justify-center rounded-md text-white transition-colors hover:bg-white/10 lg:hidden"
           onClick={onMenuOpen}
@@ -58,16 +67,16 @@ export function MainHeader({ onMenuOpen, onCategoryDrawerOpen }: MainHeaderProps
           <Menu className="h-5 w-5" />
         </button>
 
-        {/* Logo */}
         <Link href="/" className="flex flex-shrink-0 items-center">
-          <img
-            src="/images/logo.png"
-            alt="ภูเก็ต โกรเซอรี่"
-            className="h-[40px] w-auto sm:h-[48px]"
-          />
+          <div className="h-[40px] w-[40px] overflow-hidden rounded-md sm:h-[48px] sm:w-[48px]">
+            <img
+              src="/images/logo.png"
+              alt="ภูเก็ต โกรเซอรี่"
+              className="h-full w-full scale-[1.22] object-cover"
+            />
+          </div>
         </Link>
 
-        {/* Shop by Category button (desktop) */}
         <button
           onClick={onCategoryDrawerOpen}
           className="hidden items-center gap-2 rounded-md bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-100 lg:flex"
@@ -76,7 +85,6 @@ export function MainHeader({ onMenuOpen, onCategoryDrawerOpen }: MainHeaderProps
           <span>Shop by Category</span>
         </button>
 
-        {/* Search bar */}
         <form onSubmit={handleSearch} className="hidden flex-1 lg:flex">
           <div className="relative w-full max-w-2xl">
             <input
@@ -95,9 +103,7 @@ export function MainHeader({ onMenuOpen, onCategoryDrawerOpen }: MainHeaderProps
           </div>
         </form>
 
-        {/* Right icons */}
         <div className="ml-auto flex items-center gap-2 lg:gap-3">
-          {/* Mobile search */}
           <button
             className="inline-flex h-9 w-9 items-center justify-center rounded-md text-white transition-colors hover:bg-white/10 lg:hidden"
             onClick={() => router.push("/categories?search=")}
@@ -105,7 +111,6 @@ export function MainHeader({ onMenuOpen, onCategoryDrawerOpen }: MainHeaderProps
             <Search className="h-5 w-5" />
           </button>
 
-          {/* Help / Phone (desktop) */}
           <Link
             href="/contact"
             className="hidden items-center gap-2 text-sm text-white transition-colors hover:text-white/80 xl:flex"
@@ -114,16 +119,13 @@ export function MainHeader({ onMenuOpen, onCategoryDrawerOpen }: MainHeaderProps
               <Phone className="h-4 w-4" />
             </div>
             <div className="leading-tight">
-              <span className="block text-[11px] text-white/70">
-                โทรสั่งสินค้า
-              </span>
+              <span className="block text-[11px] text-white/70">โทรสั่งสินค้า</span>
               <span className="block text-xs font-semibold">
-                {COMPANY_INFO.mobile}
+                {storePhone}
               </span>
             </div>
           </Link>
 
-          {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25">
               <User className="h-4 w-4" />
@@ -138,13 +140,22 @@ export function MainHeader({ onMenuOpen, onCategoryDrawerOpen }: MainHeaderProps
                   <DropdownMenuItem onClick={() => router.push("/account")}>
                     บัญชีของฉัน
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => router.push("/account/orders")}
-                  >
+                  <DropdownMenuItem onClick={() => router.push("/account/coupons")}>
+                    คูปองของฉัน
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push("/coupons")}>
+                    เก็บคูปอง
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push("/account/orders")}>
                     ประวัติการสั่งซื้อ
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={logout}>
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      await signOut();
+                      router.push("/");
+                    }}
+                  >
                     ออกจากระบบ
                   </DropdownMenuItem>
                 </>
@@ -161,7 +172,6 @@ export function MainHeader({ onMenuOpen, onCategoryDrawerOpen }: MainHeaderProps
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Cart with amount */}
           <button
             onClick={() => router.push("/cart")}
             className="relative flex items-center gap-2 rounded-md px-2 py-1.5 text-white transition-colors hover:bg-white/10"
@@ -175,9 +185,7 @@ export function MainHeader({ onMenuOpen, onCategoryDrawerOpen }: MainHeaderProps
               )}
             </div>
             <div className="hidden text-left leading-tight lg:block">
-              <span className="block text-[11px] text-white/70">
-                ตะกร้าสินค้า
-              </span>
+              <span className="block text-[11px] text-white/70">ตะกร้าสินค้า</span>
               <span className="block text-xs font-semibold text-white">
                 {mounted ? `฿${subtotal.toLocaleString()}` : "฿0"}
               </span>

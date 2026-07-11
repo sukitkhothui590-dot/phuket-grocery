@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { login } from "@/lib/api/auth";
-import { useAuthStore } from "@/stores/auth-store";
+import { initializeUserSession } from "@/lib/session-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,31 +30,32 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const setUser = useAuthStore((s) => s.setUser);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
-
-  const fillDemo = () => {
-    setValue("emailOrPhone", "somchai@example.com");
-    setValue("password", "demo1234");
-  };
 
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true);
     setError("");
     try {
       const result = await login(data);
-      if (result.success && result.user) {
-        setUser(result.user);
+      if (
+        result.success &&
+        result.user &&
+        result.accessToken &&
+        result.refreshToken
+      ) {
+        await initializeUserSession(result.user, {
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+        });
         router.push("/");
       } else {
         setError(result.error || "เข้าสู่ระบบไม่สำเร็จ");
@@ -74,25 +75,6 @@ export default function LoginPage() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-            <p className="mb-1.5 text-xs font-semibold text-primary">
-              ทดสอบระบบ — บัญชีสาธิต
-            </p>
-            <p className="text-xs text-muted-foreground">
-              อีเมล: somchai@example.com
-            </p>
-            <p className="text-xs text-muted-foreground">
-              รหัสผ่าน: demo1234
-            </p>
-            <button
-              type="button"
-              onClick={fillDemo}
-              className="mt-2 rounded bg-primary px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-primary/80"
-            >
-              เติมข้อมูลอัตโนมัติ
-            </button>
-          </div>
-
           {error && (
             <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
               {error}

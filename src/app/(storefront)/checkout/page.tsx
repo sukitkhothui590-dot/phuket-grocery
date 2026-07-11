@@ -1,58 +1,104 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Banknote,
+  ChevronDown,
+  CreditCard,
+  MapPin,
+  Plus,
+  Search,
+  Store,
+  Ticket,
+  Truck,
+  Upload,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { AddressMapPicker } from "@/components/checkout/address-map-picker";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+import { syncCartToServer } from "@/lib/api/cart";
+import { uploadFile } from "@/lib/api/upload";
+import { createAddress } from "@/lib/api/addresses";
+import { checkout } from "@/lib/api/orders";
+import { getStoreSettings } from "@/lib/api/settings";
+import { clearCartEverywhere } from "@/lib/cart-actions";
 import {
-  BANK_ACCOUNTS,
-  SHIPPING_COST,
-  FREE_SHIPPING_THRESHOLD,
+  COMPANY_INFO,
 } from "@/lib/constants";
+import { useCouponWalletStore } from "@/stores/coupon-wallet-store";
 import type { Address, PaymentMethod, ShippingMethod } from "@/types";
-import {
-  ShoppingBag,
-  MapPin,
-  Truck,
-  CreditCard,
-  Check,
-  ChevronRight,
-  ChevronLeft,
-  Upload,
-  Plus,
-} from "lucide-react";
 
-const STEPS = [
-  { id: 1, label: "ตะกร้าสินค้า", icon: ShoppingBag },
-  { id: 2, label: "ที่อยู่จัดส่ง", icon: MapPin },
-  { id: 3, label: "วิธีจัดส่ง", icon: Truck },
-  { id: 4, label: "ชำระเงิน", icon: CreditCard },
-];
+type RegionStep = "province" | "district" | "subdistrict" | "postal";
+type AddressLabel = "บ้าน" | "ที่ทำงาน";
+
+function formatAddress(address: Address) {
+  return [
+    address.addressLine1,
+    address.addressLine2,
+    address.subDistrict,
+    address.district,
+    address.province,
+    address.postalCode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
+
+function getDeliveryWindow(method: ShippingMethod) {
+  return method === "express" ? "วันนี้ - พรุ่งนี้" : "1 - 2 วันทำการ";
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
-  const { items, coupon, discount, getSubtotal, clearCart } = useCartStore();
+  const { user, isAuthenticated, updateUser, accessToken } = useAuthStore();
+  const { items, coupon, discount, getSubtotal } = useCartStore();
 
-  const [step, setStep] = useState(1);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [shippingMethod, setShippingMethod] =
     useState<ShippingMethod>("standard");
-  const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethod>("bank_transfer");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [slipPreview, setSlipPreview] = useState<string | null>(null);
+  const [slipFile, setSlipFile] = useState<File | null>(null);
   const [transferDate, setTransferDate] = useState("");
   const [transferTime, setTransferTime] = useState("");
+  const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(1500);
+  const [bankAccountInfo, setBankAccountInfo] = useState("");
+  const [codFee, setCodFee] = useState(20);
+  const [shippingCosts, setShippingCosts] = useState({
+    standard: 50,
+    express: 100,
+  });
 
-  const [showNewAddress, setShowNewAddress] = useState(false);
+  const [addressDialogOpen, setAddressDialogOpen] = useState(false);
   const [newAddress, setNewAddress] = useState<Partial<Address>>({});
+  const [selectedMapPoint, setSelectedMapPoint] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [mapSelectionLabel, setMapSelectionLabel] = useState("");
+  const [addressLabelMode, setAddressLabelMode] = useState<AddressLabel>("บ้าน");
+  const [setAsDefaultAddress, setSetAsDefaultAddress] = useState(false);
+  const lastGeocodeQueryRef = useRef("");
+
+  const [geoError, setGeoError] = useState("");
+  const [regionLoading, setRegionLoading] = useState(false);
+  const [regionPickerOpen, setRegionPickerOpen] = useState(false);
+  const [regionStep, setRegionStep] = useState<RegionStep>("province");
+  const [provinceOptions, setProvinceOptions] = useState<string[]>([]);
+  const [districtOptions, setDistrictOptions] = useState<string[]>([]);
+  const [subdistrictOptions, setSubdistrictOptions] = useState<string[]>([]);
+  const [postalOptions, setPostalOptions] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -61,706 +107,1108 @@ export default function CheckoutPage() {
   }, [isAuthenticated, router]);
 
   useEffect(() => {
+    void (async () => {
+      const settings = await getStoreSettings();
+      setFreeShippingThreshold(settings.freeShippingThreshold);
+      setBankAccountInfo(settings.bankAccount);
+      setCodFee(settings.codFee);
+      setShippingCosts({
+        standard: settings.shippingCostStandard,
+        express: settings.shippingCostExpress,
+      });
+    })();
+  }, []);
+
+  useEffect(() => {
     if (user?.addresses.length) {
-      const defaultAddr =
-        user.addresses.find((a) => a.isDefault) || user.addresses[0];
-      setSelectedAddress(defaultAddr);
+      const defaultAddress =
+        user.addresses.find((address) => address.isDefault) || user.addresses[0];
+      setSelectedAddress(defaultAddress);
     }
   }, [user]);
 
+  const fetchRegionOptions = async (
+    level: "provinces" | "districts" | "subdistricts" | "postalcodes",
+    params?: Record<string, string>
+  ) => {
+    setRegionLoading(true);
+    setGeoError("");
+
+    try {
+      const searchParams = new URLSearchParams({ level });
+      Object.entries(params ?? {}).forEach(([key, value]) => {
+        if (value) {
+          searchParams.set(key, value);
+        }
+      });
+
+      const response = await fetch(`/api/thai-address?${searchParams.toString()}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch options: ${response.status}`);
+      }
+
+      const payload = (await response.json()) as { items: string[] };
+      return payload.items;
+    } catch {
+      setGeoError("โหลดข้อมูลพื้นที่ไม่สำเร็จ");
+      return [];
+    } finally {
+      setRegionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!addressDialogOpen || provinceOptions.length > 0) {
+      return;
+    }
+
+    void (async () => {
+      const items = await fetchRegionOptions("provinces");
+      setProvinceOptions(items);
+    })();
+  }, [addressDialogOpen, provinceOptions.length]);
+
+  const subtotal = getSubtotal();
+  const shippingCost =
+    subtotal >= freeShippingThreshold ? 0 : shippingCosts[shippingMethod];
+  const paymentFee = paymentMethod === "cod" ? codFee : 0;
+  const total = Math.max(0, subtotal - discount + shippingCost + paymentFee);
+
+  const selectedPaymentLabel =
+    paymentMethod === "cod" ? "เก็บเงินปลายทาง" : "โอนผ่านบัญชีธนาคาร";
+  const shippingLabel =
+    shippingMethod === "express" ? "ค่าจัดส่งด่วน" : "ค่าจัดส่งมาตรฐาน";
+
+  const canSubmit =
+    !!selectedAddress &&
+    items.length > 0 &&
+    (paymentMethod === "cod" ||
+      (!!slipPreview && !!transferDate && !!transferTime));
+
+  const groupedItems = useMemo(
+    () => [
+      {
+        storeName: COMPANY_INFO.shortName,
+        items,
+      },
+    ],
+    [items]
+  );
+
+  const regionSummary = [
+    newAddress.province,
+    newAddress.district,
+    newAddress.subDistrict,
+    newAddress.postalCode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const mapSearchQuery = [
+    newAddress.addressLine1,
+    newAddress.subDistrict,
+    newAddress.district,
+    newAddress.province,
+    newAddress.postalCode,
+    "ประเทศไทย",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  const handleSlipUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSlipFile(file);
+      setSlipPreview(URL.createObjectURL(file));
+    }
+  };
+
+  useEffect(() => {
+    if (!addressDialogOpen) {
+      return;
+    }
+
+    const hasEnoughAddress =
+      !!newAddress.province &&
+      !!newAddress.district &&
+      !!newAddress.subDistrict &&
+      !!newAddress.addressLine1;
+
+    if (!hasEnoughAddress) {
+      return;
+    }
+
+    const query = mapSearchQuery.trim();
+    if (!query || lastGeocodeQueryRef.current === query) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/geocode?q=${encodeURIComponent(query)}`
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = (await response.json()) as {
+          lat: number;
+          lon: number;
+          displayName?: string;
+        };
+
+        lastGeocodeQueryRef.current = query;
+        setSelectedMapPoint({
+          lat: payload.lat,
+          lng: payload.lon,
+        });
+        setMapSelectionLabel(payload.displayName || query);
+      } catch {
+        // Ignore geocode sync failures and keep manual map selection available.
+      }
+    }, 500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    addressDialogOpen,
+    mapSearchQuery,
+    newAddress.addressLine1,
+    newAddress.district,
+    newAddress.province,
+    newAddress.subDistrict,
+  ]);
+
+  const openRegionPicker = () => {
+    if (!newAddress.province) {
+      setRegionStep("province");
+    } else if (!newAddress.district) {
+      setRegionStep("district");
+    } else if (!newAddress.subDistrict) {
+      setRegionStep("subdistrict");
+    } else {
+      setRegionStep("postal");
+    }
+
+    setRegionPickerOpen(true);
+  };
+
+  const handleProvinceSelect = async (province: string) => {
+    setNewAddress((current) => ({
+      ...current,
+      province,
+      district: "",
+      subDistrict: "",
+      postalCode: "",
+    }));
+    setDistrictOptions([]);
+    setSubdistrictOptions([]);
+    setPostalOptions([]);
+    setRegionStep("district");
+    const items = await fetchRegionOptions("districts", { province });
+    setDistrictOptions(items);
+  };
+
+  const handleDistrictSelect = async (district: string) => {
+    setNewAddress((current) => ({
+      ...current,
+      district,
+      subDistrict: "",
+      postalCode: "",
+    }));
+    setSubdistrictOptions([]);
+    setPostalOptions([]);
+    setRegionStep("subdistrict");
+    const items = await fetchRegionOptions("subdistricts", {
+      province: newAddress.province || "",
+      district,
+    });
+    setSubdistrictOptions(items);
+  };
+
+  const handleSubdistrictSelect = async (subDistrict: string) => {
+    setNewAddress((current) => ({
+      ...current,
+      subDistrict,
+      postalCode: "",
+    }));
+    setPostalOptions([]);
+    setRegionStep("postal");
+    const items = await fetchRegionOptions("postalcodes", {
+      province: newAddress.province || "",
+      district: newAddress.district || "",
+      subdistrict: subDistrict,
+    });
+    setPostalOptions(items);
+  };
+
+  const handlePostalSelect = (postalCode: string) => {
+    setNewAddress((current) => ({
+      ...current,
+      postalCode,
+    }));
+    setRegionPickerOpen(false);
+  };
+
+  const handleRegionTabClick = async (step: RegionStep) => {
+    setRegionStep(step);
+
+    if (step === "district" && newAddress.province && districtOptions.length === 0) {
+      const items = await fetchRegionOptions("districts", {
+        province: newAddress.province,
+      });
+      setDistrictOptions(items);
+    }
+
+    if (
+      step === "subdistrict" &&
+      newAddress.province &&
+      newAddress.district &&
+      subdistrictOptions.length === 0
+    ) {
+      const items = await fetchRegionOptions("subdistricts", {
+        province: newAddress.province,
+        district: newAddress.district,
+      });
+      setSubdistrictOptions(items);
+    }
+
+    if (
+      step === "postal" &&
+      newAddress.province &&
+      newAddress.district &&
+      newAddress.subDistrict &&
+      postalOptions.length === 0
+    ) {
+      const items = await fetchRegionOptions("postalcodes", {
+        province: newAddress.province,
+        district: newAddress.district,
+        subdistrict: newAddress.subDistrict,
+      });
+      setPostalOptions(items);
+    }
+  };
+
+  const handleSaveNewAddress = async () => {
+    if (
+      !user ||
+      !accessToken ||
+      !newAddress.fullName ||
+      !newAddress.phone ||
+      !newAddress.addressLine1 ||
+      !newAddress.subDistrict ||
+      !newAddress.district ||
+      !newAddress.province ||
+      !newAddress.postalCode
+    ) {
+      return;
+    }
+
+    const result = await createAddress(accessToken, {
+      label: addressLabelMode,
+      fullName: newAddress.fullName,
+      phone: newAddress.phone,
+      addressLine1: newAddress.addressLine1,
+      addressLine2: newAddress.addressLine2,
+      subDistrict: newAddress.subDistrict,
+      district: newAddress.district,
+      province: newAddress.province,
+      postalCode: newAddress.postalCode,
+      isDefault: user.addresses.length === 0 || setAsDefaultAddress,
+    });
+
+    if (!result.success || !result.address) {
+      alert(result.error ?? "ไม่สามารถเพิ่มที่อยู่ได้");
+      return;
+    }
+
+    const address = result.address;
+    updateUser({
+      addresses: [...user.addresses, address],
+    });
+    setSelectedAddress(address);
+    setAddressDialogOpen(false);
+    setNewAddress({});
+    setSelectedMapPoint(null);
+    setMapSelectionLabel("");
+    lastGeocodeQueryRef.current = "";
+    setRegionPickerOpen(false);
+    setRegionStep("province");
+    setDistrictOptions([]);
+    setSubdistrictOptions([]);
+    setPostalOptions([]);
+    setAddressLabelMode("บ้าน");
+    setSetAsDefaultAddress(false);
+  };
+
+  const handleSubmitOrder = async () => {
+    if (!selectedAddress || !canSubmit || !accessToken) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      let paymentSlipUrl: string | undefined;
+
+      if (paymentMethod === "bank_transfer" && slipFile) {
+        const uploadResult = await uploadFile(slipFile, accessToken);
+        if (!uploadResult.success || !uploadResult.url) {
+          alert(uploadResult.error ?? "อัปโหลดสลิปไม่สำเร็จ");
+          return;
+        }
+        paymentSlipUrl = uploadResult.url;
+      }
+
+      await syncCartToServer(
+        accessToken,
+        items.map((item) => ({
+          unitId: item.selectedUnit.id ?? "",
+          quantity: item.quantity,
+        })),
+      );
+
+      const result = await checkout(accessToken, {
+        paymentMethod,
+        shippingMethod,
+        paymentSlipUrl,
+        paymentAmount: paymentMethod === "bank_transfer" ? total : undefined,
+        transferDate:
+          paymentMethod === "bank_transfer" ? transferDate : undefined,
+        transferTime:
+          paymentMethod === "bank_transfer" ? transferTime : undefined,
+        addressId: selectedAddress.id,
+        recipientName: selectedAddress.fullName,
+        phone: selectedAddress.phone,
+        addressLine: selectedAddress.addressLine1,
+        subDistrict: selectedAddress.subDistrict,
+        district: selectedAddress.district,
+        province: selectedAddress.province,
+        postalCode: selectedAddress.postalCode,
+        note,
+        couponCode: coupon?.code,
+      });
+
+      if (!result.success || !result.order) {
+        alert(result.error ?? "ไม่สามารถสร้างคำสั่งซื้อได้");
+        return;
+      }
+
+      if (user?.id && coupon?.code) {
+        useCouponWalletStore.getState().markUsed(user.id, coupon.code);
+      }
+
+      await clearCartEverywhere();
+      router.push(`/checkout/success/${result.order.id}`);
+    } catch {
+      alert("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (!user || !isAuthenticated) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-muted-foreground">กำลังโหลด...</p>
+      <div className="flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground">
+        กำลังโหลด...
       </div>
     );
   }
 
   if (items.length === 0) {
     return (
-      <div className="container mx-auto max-w-4xl px-4 py-12 text-center">
-        <ShoppingBag className="mx-auto size-16 text-muted-foreground/30" />
-        <h1 className="mt-4 text-xl font-medium">ตะกร้าสินค้าว่างเปล่า</h1>
-        <p className="mt-2 text-muted-foreground">
-          กรุณาเลือกสินค้าก่อนทำการสั่งซื้อ
+      <div className="mx-auto max-w-4xl px-4 py-20 text-center">
+        <h1 className="text-2xl font-semibold text-foreground">
+          ไม่มีสินค้าในคำสั่งซื้อ
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          กรุณาเลือกสินค้าในตะกร้าก่อนทำรายการ
         </p>
-        <Button className="mt-6" onClick={() => router.push("/")}>
-          กลับไปเลือกสินค้า
+        <Button className="mt-6" onClick={() => router.push("/cart")}>
+          กลับไปที่ตะกร้า
         </Button>
       </div>
     );
   }
 
-  const subtotal = getSubtotal();
-  const shippingCost =
-    subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST[shippingMethod];
-  const total = subtotal - discount + shippingCost;
-
-  const handleSlipUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSlipPreview(URL.createObjectURL(file));
-    }
-  };
-
-  const handleSubmitOrder = async () => {
-    setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1000));
-
-    const orderId = `ord-${Date.now()}`;
-    const orderNumber = `PG-${new Date()
-      .toISOString()
-      .slice(0, 10)
-      .replace(/-/g, "")}-${String(
-      Math.floor(Math.random() * 1000)
-    ).padStart(3, "0")}`;
-
-    const order = {
-      id: orderId,
-      orderNumber,
-      items: items.map((item) => ({
-        ...item,
-        subtotal: item.selectedUnit.price * item.quantity,
-      })),
-      status:
-        paymentMethod === "bank_transfer" && slipPreview
-          ? "pending_verify"
-          : "pending_payment",
-      paymentMethod,
-      shippingMethod,
-      shippingAddress: selectedAddress,
-      couponCode: coupon?.code,
-      discount,
-      shippingCost,
-      subtotal,
-      total,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    try {
-      sessionStorage.setItem(`order-${orderId}`, JSON.stringify(order));
-    } catch {
-      /* sessionStorage unavailable */
-    }
-
-    clearCart();
-    router.push(`/checkout/success/${orderId}`);
-  };
-
-  const canProceed = () => {
-    switch (step) {
-      case 1:
-        return items.length > 0;
-      case 2:
-        return !!selectedAddress;
-      case 3:
-        return !!shippingMethod;
-      case 4:
-        if (paymentMethod === "bank_transfer") {
-          return !!slipPreview && !!transferDate && !!transferTime;
-        }
-        return true;
-      default:
-        return false;
-    }
-  };
-
-  const handleSaveNewAddress = () => {
-    if (
-      newAddress.addressLine1 &&
-      newAddress.fullName &&
-      newAddress.phone &&
-      newAddress.district &&
-      newAddress.subDistrict &&
-      newAddress.province &&
-      newAddress.postalCode
-    ) {
-      const addr: Address = {
-        id: `addr-new-${Date.now()}`,
-        label: newAddress.label || "ที่อยู่ใหม่",
-        fullName: newAddress.fullName,
-        phone: newAddress.phone,
-        addressLine1: newAddress.addressLine1,
-        addressLine2: newAddress.addressLine2,
-        district: newAddress.district,
-        subDistrict: newAddress.subDistrict,
-        province: newAddress.province,
-        postalCode: newAddress.postalCode,
-        isDefault: false,
-      };
-      setSelectedAddress(addr);
-      setShowNewAddress(false);
-    }
-  };
-
   return (
-    <div className="container mx-auto max-w-6xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold">สั่งซื้อสินค้า</h1>
+    <div className="bg-[#f5f5f5] py-8">
+      <div className="mx-auto max-w-6xl px-4">
+        <section className="overflow-hidden border border-slate-200 bg-white">
+          <div className="px-6 py-5">
+            <div className="flex items-center gap-2 text-lg font-semibold text-destructive">
+              <MapPin className="h-5 w-5" />
+              <span>ที่อยู่ในการจัดส่ง</span>
+            </div>
 
-      {/* Step indicator */}
-      <div className="mb-8 flex items-center justify-center gap-1 sm:gap-2">
-        {STEPS.map((s, i) => (
-          <div key={s.id} className="flex items-center gap-1 sm:gap-2">
-            <button
-              type="button"
-              onClick={() => s.id < step && setStep(s.id)}
-              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3 ${
-                step === s.id
-                  ? "bg-primary text-white"
-                  : step > s.id
-                    ? "bg-primary/10 text-primary hover:bg-primary/20"
-                    : "bg-muted text-muted-foreground"
-              }`}
-            >
-              {step > s.id ? (
-                <Check className="size-3.5" />
-              ) : (
-                <s.icon className="size-3.5" />
-              )}
-              <span className="hidden sm:inline">{s.label}</span>
-            </button>
-            {i < STEPS.length - 1 && (
-              <ChevronRight className="size-4 text-muted-foreground" />
-            )}
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Main content */}
-        <div className="lg:col-span-2">
-          {/* Step 1: Review cart */}
-          {step === 1 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  ตรวจสอบสินค้า ({items.length} รายการ)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {items.map((item) => (
-                    <div
-                      key={`${item.productId}-${item.selectedUnit.sku}`}
-                      className="flex gap-4"
-                    >
-                      <div className="size-16 shrink-0 overflow-hidden rounded-lg bg-muted">
-                        <img
-                          src={item.productImage}
-                          alt={item.productName}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">
-                          {item.productName}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.selectedUnit.labelTh} &times; {item.quantity}
-                        </p>
-                      </div>
-                      <p className="shrink-0 font-medium">
-                        ฿
-                        {(
-                          item.selectedUnit.price * item.quantity
-                        ).toLocaleString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 2: Address */}
-          {step === 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>ที่อยู่จัดส่ง</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {user.addresses.map((addr) => (
-                    <button
-                      key={addr.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedAddress(addr);
-                        setShowNewAddress(false);
-                      }}
-                      className={`w-full rounded-lg border p-4 text-left transition-colors ${
-                        selectedAddress?.id === addr.id
-                          ? "border-primary bg-primary/5 ring-1 ring-primary"
-                          : "border-border hover:border-primary/30"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium">{addr.label}</span>
-                            {addr.isDefault && (
-                              <Badge variant="secondary">ค่าเริ่มต้น</Badge>
-                            )}
-                          </div>
-                          <p className="mt-1 text-sm">
-                            {addr.fullName} | {addr.phone}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {addr.addressLine1}
-                            {addr.addressLine2 && `, ${addr.addressLine2}`},{" "}
-                            {addr.subDistrict}, {addr.district},{" "}
-                            {addr.province} {addr.postalCode}
-                          </p>
-                        </div>
-                        {selectedAddress?.id === addr.id && (
-                          <Check className="size-5 shrink-0 text-primary" />
-                        )}
-                      </div>
-                    </button>
-                  ))}
-
-                  {!showNewAddress ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowNewAddress(true)}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-muted-foreground/30 p-4 text-sm text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
-                    >
-                      <Plus className="size-4" />
-                      เพิ่มที่อยู่ใหม่
-                    </button>
-                  ) : (
-                    <div className="space-y-3 rounded-lg border p-4">
-                      <h4 className="font-medium">ที่อยู่ใหม่</h4>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div className="space-y-1">
-                          <Label>ชื่อที่อยู่</Label>
-                          <Input
-                            placeholder="เช่น บ้าน, ร้านค้า"
-                            value={newAddress.label || ""}
-                            onChange={(e) =>
-                              setNewAddress({
-                                ...newAddress,
-                                label: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label>ชื่อผู้รับ</Label>
-                          <Input
-                            placeholder="ชื่อ-นามสกุล"
-                            value={newAddress.fullName || ""}
-                            onChange={(e) =>
-                              setNewAddress({
-                                ...newAddress,
-                                fullName: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label>เบอร์โทรผู้รับ</Label>
-                        <Input
-                          placeholder="0xx-xxx-xxxx"
-                          value={newAddress.phone || ""}
-                          onChange={(e) =>
-                            setNewAddress({
-                              ...newAddress,
-                              phone: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>ที่อยู่</Label>
-                        <Input
-                          placeholder="บ้านเลขที่ ถนน ซอย"
-                          value={newAddress.addressLine1 || ""}
-                          onChange={(e) =>
-                            setNewAddress({
-                              ...newAddress,
-                              addressLine1: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label>ที่อยู่เพิ่มเติม (ถ้ามี)</Label>
-                        <Input
-                          placeholder="อาคาร ชั้น ห้อง"
-                          value={newAddress.addressLine2 || ""}
-                          onChange={(e) =>
-                            setNewAddress({
-                              ...newAddress,
-                              addressLine2: e.target.value,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div className="space-y-1">
-                          <Label>ตำบล/แขวง</Label>
-                          <Input
-                            value={newAddress.subDistrict || ""}
-                            onChange={(e) =>
-                              setNewAddress({
-                                ...newAddress,
-                                subDistrict: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label>อำเภอ/เขต</Label>
-                          <Input
-                            value={newAddress.district || ""}
-                            onChange={(e) =>
-                              setNewAddress({
-                                ...newAddress,
-                                district: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <div className="space-y-1">
-                          <Label>จังหวัด</Label>
-                          <Input
-                            value={newAddress.province || ""}
-                            onChange={(e) =>
-                              setNewAddress({
-                                ...newAddress,
-                                province: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label>รหัสไปรษณีย์</Label>
-                          <Input
-                            value={newAddress.postalCode || ""}
-                            onChange={(e) =>
-                              setNewAddress({
-                                ...newAddress,
-                                postalCode: e.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button onClick={handleSaveNewAddress}>
-                          ใช้ที่อยู่นี้
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setShowNewAddress(false)}
-                        >
-                          ยกเลิก
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 3: Shipping method */}
-          {step === 3 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>วิธีจัดส่ง</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {(["standard", "express"] as ShippingMethod[]).map(
-                    (method) => {
-                      const cost = SHIPPING_COST[method];
-                      const isFree =
-                        subtotal >= FREE_SHIPPING_THRESHOLD &&
-                        method === "standard";
-                      return (
-                        <button
-                          key={method}
-                          type="button"
-                          onClick={() => setShippingMethod(method)}
-                          className={`w-full rounded-lg border p-4 text-left transition-colors ${
-                            shippingMethod === method
-                              ? "border-primary bg-primary/5 ring-1 ring-primary"
-                              : "border-border hover:border-primary/30"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">
-                                {method === "standard"
-                                  ? "จัดส่งปกติ"
-                                  : "จัดส่งด่วน"}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {method === "standard"
-                                  ? "จัดส่งภายใน 2-3 วันทำการ"
-                                  : "จัดส่งภายใน 1 วันทำการ"}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              {isFree ? (
-                                <div>
-                                  <span className="font-medium text-green-600">
-                                    ฟรี
-                                  </span>
-                                  <p className="text-xs text-muted-foreground line-through">
-                                    ฿{cost}
-                                  </p>
-                                </div>
-                              ) : (
-                                <span className="font-medium">฿{cost}</span>
-                              )}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    }
-                  )}
-                  {subtotal >= FREE_SHIPPING_THRESHOLD && (
-                    <p className="text-xs text-green-600">
-                      ยอดสั่งซื้อ ฿{subtotal.toLocaleString()}{" "}
-                      ได้ฟรีค่าจัดส่งแบบปกติ (ครบ ฿
-                      {FREE_SHIPPING_THRESHOLD.toLocaleString()})
+            {selectedAddress ? (
+              <div className="mt-5 grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)_240px] lg:items-start">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-[28px] font-semibold leading-none text-foreground">
+                      {selectedAddress.fullName}
                     </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 4: Payment */}
-          {step === 4 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>วิธีชำระเงิน</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-3">
-                    {(["bank_transfer", "cod"] as PaymentMethod[]).map(
-                      (method) => (
-                        <button
-                          key={method}
-                          type="button"
-                          onClick={() => setPaymentMethod(method)}
-                          className={`w-full rounded-lg border p-4 text-left transition-colors ${
-                            paymentMethod === method
-                              ? "border-primary bg-primary/5 ring-1 ring-primary"
-                              : "border-border hover:border-primary/30"
-                          }`}
-                        >
-                          <p className="font-medium">
-                            {method === "bank_transfer"
-                              ? "โอนเงินผ่านธนาคาร"
-                              : "เก็บเงินปลายทาง (COD)"}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {method === "bank_transfer"
-                              ? "โอนเงินแล้วแนบสลิป"
-                              : "ชำระเงินเมื่อได้รับสินค้า"}
-                          </p>
-                        </button>
-                      )
-                    )}
-                  </div>
-
-                  {paymentMethod === "bank_transfer" && (
-                    <div className="space-y-4 rounded-lg bg-muted/50 p-4">
-                      <h4 className="font-medium">ข้อมูลบัญชีธนาคาร</h4>
-                      <div className="space-y-2">
-                        {BANK_ACCOUNTS.map((bank, i) => (
-                          <div
-                            key={i}
-                            className="rounded-lg bg-background p-3 ring-1 ring-foreground/10"
-                          >
-                            <p className="font-medium text-primary">
-                              {bank.bankName}
-                            </p>
-                            <p className="text-sm">
-                              ชื่อบัญชี: {bank.accountName}
-                            </p>
-                            <p className="text-sm">
-                              เลขบัญชี: {bank.accountNumber}
-                            </p>
-                            {bank.branch && (
-                              <p className="text-sm text-muted-foreground">
-                                สาขา: {bank.branch}
-                              </p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-
-                      <Separator />
-
-                      <div className="space-y-3">
-                        <h4 className="font-medium">แนบสลิปการโอน</h4>
-                        <div className="space-y-1">
-                          <Label>สลิปการโอน</Label>
-                          <div className="flex items-center gap-3">
-                            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed px-4 py-2 text-sm transition-colors hover:border-primary/30 hover:text-primary">
-                              <Upload className="size-4" />
-                              เลือกไฟล์
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={handleSlipUpload}
-                              />
-                            </label>
-                            {slipPreview && (
-                              <span className="text-xs text-green-600">
-                                อัปโหลดแล้ว
-                              </span>
-                            )}
-                          </div>
-                          {slipPreview && (
-                            <div className="relative mt-2 w-48 overflow-hidden rounded-lg border">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={slipPreview}
-                                alt="สลิปการโอน"
-                                className="w-full object-contain"
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label>วันที่โอน</Label>
-                            <Input
-                              type="date"
-                              value={transferDate}
-                              onChange={(e) => setTransferDate(e.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label>เวลาที่โอน</Label>
-                            <Input
-                              type="time"
-                              value={transferTime}
-                              onChange={(e) => setTransferTime(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {paymentMethod === "cod" && (
-                    <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
-                      กรุณาเตรียมเงินสด ฿{total.toLocaleString()}{" "}
-                      สำหรับชำระเมื่อได้รับสินค้า
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Navigation buttons */}
-          <div className="mt-6 flex justify-between">
-            <Button
-              variant="outline"
-              onClick={() => setStep((s) => Math.max(1, s - 1))}
-              disabled={step === 1}
-            >
-              <ChevronLeft className="size-4" />
-              ย้อนกลับ
-            </Button>
-            {step < 4 ? (
-              <Button
-                onClick={() => setStep((s) => Math.min(4, s + 1))}
-                disabled={!canProceed()}
-              >
-                ถัดไป
-                <ChevronRight className="size-4" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSubmitOrder}
-                disabled={!canProceed() || submitting}
-              >
-                {submitting ? "กำลังสั่งซื้อ..." : "ยืนยันคำสั่งซื้อ"}
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Order summary sidebar */}
-        <div className="lg:col-span-1">
-          <Card className="sticky top-4">
-            <CardHeader>
-              <CardTitle>สรุปคำสั่งซื้อ</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="max-h-48 space-y-2 overflow-y-auto">
-                  {items.map((item) => (
-                    <div
-                      key={`${item.productId}-${item.selectedUnit.sku}`}
-                      className="flex justify-between text-sm"
-                    >
-                      <span className="line-clamp-1 flex-1">
-                        {item.productName} &times;{item.quantity}
-                      </span>
-                      <span className="ml-2 shrink-0">
-                        ฿
-                        {(
-                          item.selectedUnit.price * item.quantity
-                        ).toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <Separator />
-
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">ยอดสินค้า</span>
-                    <span>฿{subtotal.toLocaleString()}</span>
-                  </div>
-                  {discount > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>ส่วนลด {coupon?.code && `(${coupon.code})`}</span>
-                      <span>-฿{discount.toLocaleString()}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">ค่าจัดส่ง</span>
-                    <span>
-                      {shippingCost === 0 ? (
-                        <span className="text-green-600">ฟรี</span>
-                      ) : (
-                        `฿${shippingCost}`
-                      )}
+                    <span className="inline-flex border border-destructive/35 px-2 py-0.5 text-xs font-medium text-destructive">
+                      ค่าเริ่มต้น
                     </span>
                   </div>
+                  <p className="text-[22px] font-semibold leading-none text-foreground">
+                    {selectedAddress.phone}
+                  </p>
+                  <p className="text-sm text-slate-500">{selectedAddress.label}</p>
                 </div>
 
-                <Separator />
+                <div className="pt-1">
+                  <p className="text-[15px] leading-7 text-slate-700">
+                    {formatAddress(selectedAddress)}
+                  </p>
+                </div>
 
-                <div className="flex justify-between text-base font-bold">
-                  <span>รวมทั้งสิ้น</span>
-                  <span className="text-primary">
-                    ฿{total.toLocaleString()}
-                  </span>
+                <div className="flex flex-col items-start gap-3 lg:items-end">
+                  {user.addresses.length > 1 && (
+                    <select
+                      value={selectedAddress.id}
+                      onChange={(event) => {
+                        const nextAddress = user.addresses.find(
+                          (address) => address.id === event.target.value
+                        );
+                        if (nextAddress) {
+                          setSelectedAddress(nextAddress);
+                        }
+                      }}
+                      className="h-11 min-w-[220px] border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition-colors focus:border-primary"
+                    >
+                      {user.addresses.map((address) => (
+                        <option key={address.id} value={address.id}>
+                          {address.label} - {address.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setAddressDialogOpen(true)}
+                    className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                  >
+                    เพิ่มที่อยู่ใหม่
+                  </button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            ) : (
+              <div className="mt-5 rounded border border-dashed border-slate-300 bg-slate-50 px-4 py-5">
+                <p className="text-sm text-slate-600">ยังไม่มีที่อยู่จัดส่ง</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-3 gap-2"
+                  onClick={() => setAddressDialogOpen(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                  เพิ่มที่อยู่จัดส่ง
+                </Button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <Dialog
+          open={addressDialogOpen}
+          onOpenChange={(open) => {
+            setAddressDialogOpen(open);
+            if (!open) {
+              setNewAddress({});
+              setSelectedMapPoint(null);
+              setMapSelectionLabel("");
+              lastGeocodeQueryRef.current = "";
+              setRegionPickerOpen(false);
+              setRegionStep("province");
+              setGeoError("");
+              setAddressLabelMode("บ้าน");
+              setSetAsDefaultAddress(false);
+            }
+          }}
+        >
+          <DialogContent className="max-w-[calc(100%-2rem)] gap-0 overflow-hidden rounded-sm p-0 shadow-[0_20px_60px_rgba(15,23,42,0.18)] sm:max-w-[620px]">
+            <DialogHeader className="border-b border-slate-200 px-6 py-5">
+              <DialogTitle className="text-[18px] font-semibold text-foreground">
+                ที่อยู่ใหม่
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="px-6 py-5">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  placeholder="ชื่อ-นามสกุล"
+                  value={newAddress.fullName || ""}
+                  onChange={(event) =>
+                    setNewAddress((current) => ({
+                      ...current,
+                      fullName: event.target.value,
+                    }))
+                  }
+                />
+                <Input
+                  placeholder="หมายเลขโทรศัพท์"
+                  value={newAddress.phone || ""}
+                  onChange={(event) =>
+                    setNewAddress((current) => ({
+                      ...current,
+                      phone: event.target.value,
+                    }))
+                  }
+                />
+
+                <div className="sm:col-span-2">
+                  <button
+                    type="button"
+                    onClick={openRegionPicker}
+                    className="flex h-11 w-full items-center justify-between border border-slate-300 bg-white px-3 text-left text-sm text-slate-500"
+                  >
+                    <span>
+                      {regionSummary ||
+                        "จังหวัด, เขต/อำเภอ, แขวง/ตำบล, รหัสไปรษณีย์"}
+                    </span>
+                    <div className="flex items-center gap-3 text-slate-400">
+                      <Search className="h-4 w-4" />
+                      <ChevronDown className="h-4 w-4" />
+                    </div>
+                  </button>
+                </div>
+
+                {regionPickerOpen && (
+                  <div className="sm:col-span-2 overflow-hidden border border-slate-300">
+                    <div className="grid grid-cols-4 border-b border-slate-200 bg-white text-center text-sm">
+                      {[
+                        { key: "province", label: "จังหวัด" },
+                        { key: "district", label: "เขต/อำเภอ" },
+                        { key: "subdistrict", label: "แขวง/ตำบล" },
+                        { key: "postal", label: "รหัสไปรษณีย์" },
+                      ].map((tab) => {
+                        const disabled =
+                          (tab.key === "district" && !newAddress.province) ||
+                          (tab.key === "subdistrict" && !newAddress.district) ||
+                          (tab.key === "postal" && !newAddress.subDistrict);
+
+                        const active = regionStep === tab.key;
+
+                        return (
+                          <button
+                            key={tab.key}
+                            type="button"
+                            disabled={disabled}
+                            onClick={() =>
+                              void handleRegionTabClick(tab.key as RegionStep)
+                            }
+                            className={`px-3 py-3 font-medium transition-colors ${
+                              active
+                                ? "border-b-2 border-destructive text-destructive"
+                                : "text-foreground"
+                            } ${disabled ? "cursor-not-allowed opacity-40" : ""}`}
+                          >
+                            {tab.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="max-h-64 overflow-y-auto bg-white">
+                      {regionLoading ? (
+                        <div className="px-4 py-4 text-sm text-slate-500">
+                          กำลังโหลดข้อมูลพื้นที่...
+                        </div>
+                      ) : geoError ? (
+                        <div className="px-4 py-4 text-sm text-destructive">
+                          {geoError}
+                        </div>
+                      ) : null}
+
+                      {!regionLoading && !geoError && regionStep === "province" &&
+                        provinceOptions.map((province) => (
+                          <button
+                            key={province}
+                            type="button"
+                            onClick={() => handleProvinceSelect(province)}
+                            className="block w-full px-4 py-3 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
+                          >
+                            {province}
+                          </button>
+                        ))}
+
+                      {!regionLoading && !geoError && regionStep === "district" &&
+                        districtOptions.map((district) => (
+                          <button
+                            key={district}
+                            type="button"
+                            onClick={() => handleDistrictSelect(district)}
+                            className="block w-full px-4 py-3 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
+                          >
+                            {district}
+                          </button>
+                        ))}
+
+                      {!regionLoading && !geoError && regionStep === "subdistrict" &&
+                        subdistrictOptions.map((subDistrict) => (
+                          <button
+                            key={subDistrict}
+                            type="button"
+                            onClick={() => handleSubdistrictSelect(subDistrict)}
+                            className="block w-full px-4 py-3 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
+                          >
+                            {subDistrict}
+                          </button>
+                        ))}
+
+                      {!regionLoading && !geoError && regionStep === "postal" &&
+                        postalOptions.map((postalCode) => (
+                          <button
+                            key={postalCode}
+                            type="button"
+                            onClick={() => handlePostalSelect(postalCode)}
+                            className="block w-full px-4 py-3 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
+                          >
+                            {postalCode}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="sm:col-span-2">
+                  <Input
+                    placeholder="บ้านเลขที่, ซอย, หมู่, ถนน, แขวง/ตำบล"
+                    value={newAddress.addressLine1 || ""}
+                    onChange={(event) =>
+                      setNewAddress((current) => ({
+                        ...current,
+                        addressLine1: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <AddressMapPicker
+                    value={selectedMapPoint}
+                    selectedLabel={mapSelectionLabel}
+                    onChange={async (selection) => {
+                      const nextProvince = selection.province || "";
+                      const nextDistrict = selection.district || "";
+                      const nextSubDistrict = selection.subDistrict || "";
+                      const nextPostalCode = selection.postalCode || "";
+
+                      setSelectedMapPoint({
+                        lat: selection.lat,
+                        lng: selection.lon,
+                      });
+                      setMapSelectionLabel(
+                        selection.displayName ||
+                          selection.addressLine1 ||
+                          regionSummary
+                      );
+
+                      setNewAddress((current) => ({
+                        ...current,
+                        province: nextProvince || current.province,
+                        district: nextDistrict || current.district,
+                        subDistrict: nextSubDistrict || current.subDistrict,
+                        postalCode: nextPostalCode || current.postalCode,
+                        addressLine1:
+                          current.addressLine1 ||
+                          selection.addressLine1 ||
+                          current.addressLine1,
+                        addressLine2:
+                          selection.displayName || current.addressLine2,
+                      }));
+
+                      if (nextProvince) {
+                        const districtItems = await fetchRegionOptions("districts", {
+                          province: nextProvince,
+                        });
+                        setDistrictOptions(districtItems);
+                      }
+
+                      if (nextProvince && nextDistrict) {
+                        const subdistrictItems = await fetchRegionOptions(
+                          "subdistricts",
+                          {
+                            province: nextProvince,
+                            district: nextDistrict,
+                          }
+                        );
+                        setSubdistrictOptions(subdistrictItems);
+                      }
+
+                      if (nextProvince && nextDistrict && nextSubDistrict) {
+                        const postalItems = await fetchRegionOptions(
+                          "postalcodes",
+                          {
+                            province: nextProvince,
+                            district: nextDistrict,
+                            subdistrict: nextSubDistrict,
+                          }
+                        );
+                        setPostalOptions(postalItems);
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <p className="mb-3 text-sm text-foreground">ติดป้ายเป็น:</p>
+                  <div className="flex gap-3">
+                    {(["บ้าน", "ที่ทำงาน"] as const).map((label) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => setAddressLabelMode(label)}
+                        className={`h-10 border px-5 text-sm transition-colors ${
+                          addressLabelMode === label
+                            ? "border-slate-400 bg-white text-foreground"
+                            : "border-slate-200 bg-white text-slate-600"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="inline-flex items-center gap-3 text-sm text-slate-400">
+                    <input
+                      type="checkbox"
+                      checked={setAsDefaultAddress}
+                      onChange={(event) =>
+                        setSetAsDefaultAddress(event.target.checked)
+                      }
+                      className="h-4 w-4 border-slate-300"
+                    />
+                    เลือกเป็นที่อยู่ตั้งต้น
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-5">
+              <Button
+                variant="ghost"
+                className="h-11 rounded-sm px-6 text-slate-700"
+                onClick={() => setAddressDialogOpen(false)}
+              >
+                ยกเลิก
+              </Button>
+              <Button
+                className="h-11 rounded-sm bg-destructive px-8 text-white hover:bg-destructive/90"
+                onClick={handleSaveNewAddress}
+              >
+                ยืนยัน
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <section className="mt-4 border border-slate-200 bg-white">
+          <div className="hidden border-b border-slate-100 px-6 py-4 text-sm text-slate-500 lg:grid lg:grid-cols-[minmax(0,1fr)_170px_140px_160px]">
+            <div>สินค้าที่สั่งซื้อแล้ว</div>
+            <div className="text-center">ราคาต่อหน่วย</div>
+            <div className="text-center">จำนวน</div>
+            <div className="text-right">รายการย่อย</div>
+          </div>
+
+          {groupedItems.map((group, groupIndex) => {
+            const groupSubtotal = group.items.reduce(
+              (sum, item) => sum + item.selectedUnit.price * item.quantity,
+              0
+            );
+
+            return (
+              <div
+                key={`${group.storeName}-${groupIndex}`}
+                className={groupIndex > 0 ? "border-t border-slate-200" : ""}
+              >
+                <div className="flex items-center gap-3 px-6 py-4 text-sm">
+                  <Store className="h-4 w-4 text-slate-600" />
+                  <span className="font-medium text-foreground">{group.storeName}</span>
+                  <span className="text-primary">แชทเลย</span>
+                </div>
+
+                {group.items.map((item) => {
+                  const itemSubtotal = item.selectedUnit.price * item.quantity;
+
+                  return (
+                    <div
+                      key={`${item.productId}-${item.selectedUnit.sku}`}
+                      className="grid gap-4 border-t border-slate-100 px-6 py-5 lg:grid-cols-[minmax(0,1fr)_170px_140px_160px] lg:items-center"
+                    >
+                      <div className="flex gap-4">
+                        <div className="h-18 w-18 flex-shrink-0 overflow-hidden border border-slate-200 bg-slate-50">
+                          <img
+                            src={item.productImage}
+                            alt={item.productName}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="line-clamp-2 text-sm leading-6 text-foreground">
+                            {item.productName}
+                          </p>
+                          <p className="mt-2 text-sm text-slate-400">
+                            ตัวเลือกสินค้า: {item.selectedUnit.labelTh}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-sm lg:text-center">
+                        <p className="text-foreground">
+                          ฿{item.selectedUnit.price.toLocaleString()}
+                        </p>
+                      </div>
+
+                      <div className="text-sm lg:text-center">{item.quantity}</div>
+
+                      <div className="text-sm font-medium text-foreground lg:text-right">
+                        ฿{itemSubtotal.toLocaleString()}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div className="grid border-t border-dashed border-slate-200 lg:grid-cols-2">
+                  <div className="border-b border-dashed border-slate-200 px-6 py-5 lg:border-b-0 lg:border-r">
+                    <label className="block text-sm font-medium text-foreground">
+                      หมายเหตุ:
+                    </label>
+                    <textarea
+                      value={note}
+                      onChange={(event) => setNote(event.target.value)}
+                      placeholder="(ไม่บังคับ) ฝากข้อความถึงผู้ขายหรือบริษัทขนส่ง"
+                      className="mt-3 h-12 w-full resize-none border border-slate-300 px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="px-6 py-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          ตัวเลือกการจัดส่ง:
+                        </p>
+                        <div className="mt-2 flex items-center gap-2 text-primary">
+                          <Truck className="h-4 w-4" />
+                          <span className="text-sm font-medium">
+                            {getDeliveryWindow(shippingMethod)}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm text-slate-600">
+                          {shippingMethod === "express"
+                            ? "Express Delivery - จัดส่งด่วนในวันถัดไป"
+                            : "Standard Delivery - ส่งธรรมดาทั่วประเทศ"}
+                        </p>
+                        {shippingCost === 0 ? (
+                          <p className="mt-1 text-xs text-green-600">
+                            รับส่วนลดค่าส่ง เมื่อยอดสั่งซื้อถึงขั้นต่ำ
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-xs text-slate-400">
+                            ค่าจัดส่งจะคิดตามวิธีส่งที่เลือก
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="text-right">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShippingMethod((current) =>
+                              current === "standard" ? "express" : "standard"
+                            )
+                          }
+                          className="text-sm text-primary transition-colors hover:text-primary/80"
+                        >
+                          เปลี่ยน
+                        </button>
+                        <p className="mt-3 text-sm text-foreground">
+                          ฿{shippingCost.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-slate-100 px-6 py-5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-foreground">
+                      <Ticket className="h-4 w-4 text-destructive" />
+                      <span>โค้ดส่วนลดร้านค้า</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-destructive">
+                        {coupon ? `-${coupon.code}` : "กดใช้โค้ด"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end border-t border-slate-100 px-6 py-6">
+                  <p className="text-sm text-slate-500">
+                    คำสั่งซื้อทั้งหมด ({group.items.length} ชิ้น):
+                    <span className="ml-4 font-semibold text-destructive">
+                      ฿{(groupSubtotal + shippingCost + paymentFee).toLocaleString()}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+
+        <section className="mt-4 border border-slate-200 bg-white">
+          <div className="flex items-center justify-between px-6 py-5">
+            <div className="flex items-center gap-3 text-2xl text-foreground">
+              <Ticket className="h-5 w-5 text-destructive" />
+              <span className="text-base">โค้ดส่วนลดของร้าน</span>
+            </div>
+            <span className="text-sm text-primary">
+              {coupon ? coupon.code : "กดใช้โค้ด"}
+            </span>
+          </div>
+        </section>
+
+        <section className="mt-4 border border-slate-200 bg-white">
+          <div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <CreditCard className="h-5 w-5 text-slate-500" />
+              <span className="text-base font-medium text-foreground">
+                วิธีการชำระเงิน
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("cod")}
+                className={`inline-flex items-center gap-2 border px-4 py-2 text-sm transition-colors ${
+                  paymentMethod === "cod"
+                    ? "border-destructive bg-destructive/5 text-destructive"
+                    : "border-slate-300 text-slate-600 hover:border-primary/40"
+                }`}
+              >
+                <Banknote className="h-4 w-4" />
+                เก็บเงินปลายทาง
+                {codFee > 0 ? ` (+฿${codFee})` : ""}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("bank_transfer")}
+                className={`inline-flex items-center gap-2 border px-4 py-2 text-sm transition-colors ${
+                  paymentMethod === "bank_transfer"
+                    ? "border-destructive bg-destructive/5 text-destructive"
+                    : "border-slate-300 text-slate-600 hover:border-primary/40"
+                }`}
+              >
+                <CreditCard className="h-4 w-4" />
+                โอนผ่านบัญชี
+              </button>
+            </div>
+          </div>
+
+          {paymentMethod === "bank_transfer" && (
+            <div className="border-b border-slate-100 px-6 py-5">
+              {bankAccountInfo && (
+                <p className="mb-4 rounded-md bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  โอนเข้าบัญชี: {bankAccountInfo}
+                </p>
+              )}
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-3 text-sm text-slate-700">
+                  <p className="font-medium text-foreground">อัปโหลดหลักฐานการโอน</p>
+                  <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-3 border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center text-sm text-slate-500 hover:border-primary/40 hover:text-primary">
+                    <Upload className="h-5 w-5" />
+                    <span>คลิกเพื่อเลือกสลิป</span>
+                    <input type="file" className="hidden" onChange={handleSlipUpload} />
+                  </label>
+                  {slipPreview && (
+                    <img
+                      src={slipPreview}
+                      alt="Slip preview"
+                      className="h-36 w-auto rounded border border-slate-200 object-cover"
+                    />
+                  )}
+                </div>
+
+                <div className="grid gap-3 self-start sm:grid-cols-2">
+                  <Input
+                    type="date"
+                    value={transferDate}
+                    onChange={(event) => setTransferDate(event.target.value)}
+                  />
+                  <Input
+                    type="time"
+                    value={transferTime}
+                    onChange={(event) => setTransferTime(event.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="px-6 py-6">
+            <div className="ml-auto max-w-md space-y-4 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">ราคาสินค้า</span>
+                <span>฿{subtotal.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">{shippingLabel}</span>
+                <span>
+                  {shippingCost === 0
+                    ? "ฟรี"
+                    : `฿${shippingCost.toLocaleString()}`}
+                </span>
+              </div>
+              {paymentFee > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">ค่าธรรมเนียม COD</span>
+                  <span>฿{paymentFee.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-slate-600">ส่วนลดคูปอง</span>
+                <span className="text-destructive">
+                  -฿{discount.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                <span className="text-base text-slate-700">ยอดชำระเงินทั้งหมด</span>
+                <span className="text-2xl font-semibold text-destructive">
+                  ฿{total.toLocaleString()}
+                </span>
+              </div>
+              <p className="text-right text-[11px] text-slate-400">
+                <a href="/fees" className="hover:text-primary hover:underline">
+                  ดูค่าใช้จ่ายทั้งหมดในระบบ
+                </a>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-4 border-t border-slate-100 px-6 py-5 lg:flex-row lg:items-end lg:justify-between">
+            <p className="max-w-3xl text-xs leading-6 text-slate-500">
+              โดยการคลิก "สั่งสินค้า" ฉันได้อ่านและยอมรับเงื่อนไขการให้บริการ
+              และนโยบายการจัดส่งของ {COMPANY_INFO.shortName}
+            </p>
+            <div className="text-right">
+              <p className="mb-2 text-sm text-slate-500">{selectedPaymentLabel}</p>
+              <Button
+                onClick={handleSubmitOrder}
+                disabled={!canSubmit || submitting}
+                className="h-12 min-w-[210px] rounded-sm bg-destructive text-base font-semibold text-white hover:bg-destructive/90"
+              >
+                {submitting ? "กำลังดำเนินการ..." : "สั่งสินค้า"}
+              </Button>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

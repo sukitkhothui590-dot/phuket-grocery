@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { register as registerApi } from "@/lib/api/auth";
-import { useAuthStore } from "@/stores/auth-store";
+import { initializeUserSession } from "@/lib/session-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,8 +19,12 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ThaiRegionPicker } from "@/components/address/thai-region-picker";
+import { AddressMapPicker } from "@/components/checkout/address-map-picker";
 import { SITE_NAME } from "@/lib/constants";
 import { UserPlus } from "lucide-react";
+
+type AddressLabel = "บ้าน" | "ที่ทำงาน";
 
 const registerSchema = z
   .object({
@@ -28,18 +32,18 @@ const registerSchema = z
     lastName: z.string().min(1, "กรุณากรอกนามสกุล"),
     email: z.string().email("อีเมลไม่ถูกต้อง"),
     phone: z.string().min(9, "เบอร์โทรศัพท์ไม่ถูกต้อง"),
-    password: z.string().min(6, "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร"),
+    password: z.string().min(8, "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"),
     confirmPassword: z.string().min(1, "กรุณายืนยันรหัสผ่าน"),
     address: z.object({
-      label: z.string().min(1, "กรุณาตั้งชื่อที่อยู่ เช่น บ้าน, ร้านค้า"),
+      label: z.string().min(1, "กรุณาเลือกป้ายที่อยู่"),
       fullName: z.string().min(1, "กรุณากรอกชื่อผู้รับ"),
       phone: z.string().min(9, "กรุณากรอกเบอร์โทรผู้รับ"),
       addressLine1: z.string().min(1, "กรุณากรอกที่อยู่"),
       addressLine2: z.string().optional(),
-      district: z.string().min(1, "กรุณากรอกอำเภอ/เขต"),
-      subDistrict: z.string().min(1, "กรุณากรอกตำบล/แขวง"),
-      province: z.string().min(1, "กรุณากรอกจังหวัด"),
-      postalCode: z.string().min(5, "รหัสไปรษณีย์ไม่ถูกต้อง"),
+      district: z.string().min(1, "กรุณาเลือกอำเภอ/เขต"),
+      subDistrict: z.string().min(1, "กรุณาเลือกตำบล/แขวง"),
+      province: z.string().min(1, "กรุณาเลือกจังหวัด"),
+      postalCode: z.string().min(5, "กรุณาเลือกรหัสไปรษณีย์"),
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -51,36 +55,106 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const setUser = useAuthStore((s) => s.setUser);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [regionError, setRegionError] = useState("");
+  const [addressLabelMode, setAddressLabelMode] =
+    useState<AddressLabel>("บ้าน");
+  const [selectedMapPoint, setSelectedMapPoint] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+  const [mapSelectionLabel, setMapSelectionLabel] = useState("");
 
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      address: { province: "ภูเก็ต" },
+      address: {
+        label: "บ้าน",
+        province: "",
+        district: "",
+        subDistrict: "",
+        postalCode: "",
+        fullName: "",
+        phone: "",
+        addressLine1: "",
+        addressLine2: "",
+      },
     },
   });
 
+  const firstName = watch("firstName");
+  const lastName = watch("lastName");
+  const phone = watch("phone");
+  const addressFullName = watch("address.fullName");
+  const addressPhone = watch("address.phone");
+  const addressLine1 = watch("address.addressLine1");
+  const province = watch("address.province");
+  const district = watch("address.district");
+  const subDistrict = watch("address.subDistrict");
+  const postalCode = watch("address.postalCode");
+
+  const regionSummary = [province, district, subDistrict, postalCode]
+    .filter(Boolean)
+    .join(", ");
+
+  useEffect(() => {
+    const fullName = `${firstName || ""} ${lastName || ""}`.trim();
+    if (fullName && !addressFullName) {
+      setValue("address.fullName", fullName);
+    }
+  }, [firstName, lastName, addressFullName, setValue]);
+
+  useEffect(() => {
+    if (phone && !addressPhone) {
+      setValue("address.phone", phone);
+    }
+  }, [phone, addressPhone, setValue]);
+
   const onSubmit = async (data: RegisterFormData) => {
+    if (
+      !data.address.province ||
+      !data.address.district ||
+      !data.address.subDistrict ||
+      !data.address.postalCode
+    ) {
+      setRegionError("กรุณาเลือกจังหวัด อำเภอ ตำบล และรหัสไปรษณีย์");
+      return;
+    }
+
     setLoading(true);
     setError("");
+    setRegionError("");
+
     try {
-      const registerData = {
+      const result = await registerApi({
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
         phone: data.phone,
         password: data.password,
-        address: data.address,
-      };
-      const result = await registerApi(registerData);
-      if (result.success && result.user) {
-        setUser(result.user);
+        address: {
+          ...data.address,
+          label: addressLabelMode,
+        },
+      });
+
+      if (
+        result.success &&
+        result.user &&
+        result.accessToken &&
+        result.refreshToken
+      ) {
+        await initializeUserSession(result.user, {
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+        });
         router.push("/");
       } else {
         setError(result.error || "สมัครสมาชิกไม่สำเร็จ");
@@ -107,7 +181,7 @@ export default function RegisterPage() {
           )}
 
           <div className="space-y-4">
-            <h3 className="text-sm font-medium text-foreground">
+            <h3 className="text-sm font-semibold text-foreground">
               ข้อมูลส่วนตัว
             </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -169,7 +243,7 @@ export default function RegisterPage() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="อย่างน้อย 6 ตัวอักษร"
+                  placeholder="อย่างน้อย 8 ตัวอักษร"
                   {...register("password")}
                 />
                 {errors.password && (
@@ -197,29 +271,16 @@ export default function RegisterPage() {
 
           <Separator />
 
+          {/* Address section — same layout as checkout "ที่อยู่ใหม่" */}
           <div className="space-y-4">
-            <h3 className="text-sm font-medium text-foreground">
+            <h3 className="text-sm font-semibold text-foreground">
               ที่อยู่จัดส่ง
             </h3>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="addr-label">ชื่อที่อยู่</Label>
                 <Input
-                  id="addr-label"
-                  placeholder="เช่น บ้าน, ร้านค้า"
-                  {...register("address.label")}
-                />
-                {errors.address?.label && (
-                  <p className="text-xs text-red-500">
-                    {errors.address.label.message}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="addr-fullName">ชื่อผู้รับ</Label>
-                <Input
-                  id="addr-fullName"
-                  placeholder="ชื่อ-นามสกุล ผู้รับ"
+                  placeholder="ชื่อ-นามสกุล"
                   {...register("address.fullName")}
                 />
                 {errors.address?.fullName && (
@@ -228,105 +289,150 @@ export default function RegisterPage() {
                   </p>
                 )}
               </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="addr-phone">เบอร์โทรผู้รับ</Label>
-              <Input
-                id="addr-phone"
-                placeholder="0xx-xxx-xxxx"
-                {...register("address.phone")}
-              />
-              {errors.address?.phone && (
-                <p className="text-xs text-red-500">
-                  {errors.address.phone.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="addr-line1">ที่อยู่</Label>
-              <Input
-                id="addr-line1"
-                placeholder="บ้านเลขที่ ถนน ซอย"
-                {...register("address.addressLine1")}
-              />
-              {errors.address?.addressLine1 && (
-                <p className="text-xs text-red-500">
-                  {errors.address.addressLine1.message}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="addr-line2">ที่อยู่เพิ่มเติม (ถ้ามี)</Label>
-              <Input
-                id="addr-line2"
-                placeholder="อาคาร ชั้น ห้อง"
-                {...register("address.addressLine2")}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="addr-subDistrict">ตำบล/แขวง</Label>
                 <Input
-                  id="addr-subDistrict"
-                  placeholder="ตำบล/แขวง"
-                  {...register("address.subDistrict")}
+                  placeholder="หมายเลขโทรศัพท์"
+                  {...register("address.phone")}
                 />
-                {errors.address?.subDistrict && (
+                {errors.address?.phone && (
                   <p className="text-xs text-red-500">
-                    {errors.address.subDistrict.message}
+                    {errors.address.phone.message}
                   </p>
                 )}
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="addr-district">อำเภอ/เขต</Label>
-                <Input
-                  id="addr-district"
-                  placeholder="อำเภอ/เขต"
-                  {...register("address.district")}
+
+              <div className="sm:col-span-2">
+                <ThaiRegionPicker
+                  variant="checkout"
+                  value={{
+                    province: province || "",
+                    district: district || "",
+                    subDistrict: subDistrict || "",
+                    postalCode: postalCode || "",
+                  }}
+                  onChange={(next) => {
+                    setRegionError("");
+                    setValue("address.province", next.province, {
+                      shouldValidate: true,
+                    });
+                    setValue("address.district", next.district, {
+                      shouldValidate: true,
+                    });
+                    setValue("address.subDistrict", next.subDistrict, {
+                      shouldValidate: true,
+                    });
+                    setValue("address.postalCode", next.postalCode, {
+                      shouldValidate: true,
+                    });
+                  }}
+                  error={
+                    regionError ||
+                    errors.address?.province?.message ||
+                    errors.address?.district?.message ||
+                    errors.address?.subDistrict?.message ||
+                    errors.address?.postalCode?.message
+                  }
                 />
-                {errors.address?.district && (
+              </div>
+
+              <div className="sm:col-span-2 space-y-1.5">
+                <Input
+                  placeholder="บ้านเลขที่, ซอย, หมู่, ถนน, แขวง/ตำบล"
+                  {...register("address.addressLine1")}
+                />
+                {errors.address?.addressLine1 && (
                   <p className="text-xs text-red-500">
-                    {errors.address.district.message}
+                    {errors.address.addressLine1.message}
                   </p>
                 )}
               </div>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="addr-province">จังหวัด</Label>
-                <Input
-                  id="addr-province"
-                  placeholder="จังหวัด"
-                  {...register("address.province")}
+
+              <div className="sm:col-span-2">
+                <AddressMapPicker
+                  value={selectedMapPoint}
+                  selectedLabel={mapSelectionLabel}
+                  onChange={(selection) => {
+                    const nextProvince = selection.province || "";
+                    const nextDistrict = selection.district || "";
+                    const nextSubDistrict = selection.subDistrict || "";
+                    const nextPostalCode = selection.postalCode || "";
+
+                    setSelectedMapPoint({
+                      lat: selection.lat,
+                      lng: selection.lon,
+                    });
+                    setMapSelectionLabel(
+                      selection.displayName ||
+                        selection.addressLine1 ||
+                        regionSummary,
+                    );
+
+                    if (nextProvince) {
+                      setValue("address.province", nextProvince, {
+                        shouldValidate: true,
+                      });
+                    }
+                    if (nextDistrict) {
+                      setValue("address.district", nextDistrict, {
+                        shouldValidate: true,
+                      });
+                    }
+                    if (nextSubDistrict) {
+                      setValue("address.subDistrict", nextSubDistrict, {
+                        shouldValidate: true,
+                      });
+                    }
+                    if (nextPostalCode) {
+                      setValue("address.postalCode", nextPostalCode, {
+                        shouldValidate: true,
+                      });
+                    }
+                    if (!addressLine1 && selection.addressLine1) {
+                      setValue("address.addressLine1", selection.addressLine1, {
+                        shouldValidate: true,
+                      });
+                    }
+                    if (selection.displayName) {
+                      setValue("address.addressLine2", selection.displayName);
+                    }
+                    setRegionError("");
+                  }}
                 />
-                {errors.address?.province && (
-                  <p className="text-xs text-red-500">
-                    {errors.address.province.message}
-                  </p>
-                )}
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="addr-postalCode">รหัสไปรษณีย์</Label>
-                <Input
-                  id="addr-postalCode"
-                  placeholder="xxxxx"
-                  {...register("address.postalCode")}
-                />
-                {errors.address?.postalCode && (
-                  <p className="text-xs text-red-500">
-                    {errors.address.postalCode.message}
+
+              <div className="sm:col-span-2">
+                <p className="mb-3 text-sm text-foreground">ติดป้ายเป็น:</p>
+                <div className="flex gap-3">
+                  {(["บ้าน", "ที่ทำงาน"] as const).map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => {
+                        setAddressLabelMode(label);
+                        setValue("address.label", label, {
+                          shouldValidate: true,
+                        });
+                      }}
+                      className={`h-10 border px-5 text-sm transition-colors ${
+                        addressLabelMode === label
+                          ? "border-slate-400 bg-white text-foreground"
+                          : "border-slate-200 bg-white text-slate-600"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {errors.address?.label && (
+                  <p className="mt-1.5 text-xs text-red-500">
+                    {errors.address.label.message}
                   </p>
                 )}
               </div>
             </div>
           </div>
 
-          <Button
-            type="submit"
-            className="w-full"
-            size="lg"
-            disabled={loading}
-          >
+          <Button type="submit" className="w-full" size="lg" disabled={loading}>
             <UserPlus className="size-4" />
             {loading ? "กำลังสมัครสมาชิก..." : "สมัครสมาชิก"}
           </Button>

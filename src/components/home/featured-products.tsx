@@ -29,7 +29,7 @@ export function FeaturedProducts({
   if (products.length === 0) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-8">
+    <section id="featured-products" className="mx-auto max-w-7xl scroll-mt-28 px-4 py-8">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-red-50">
@@ -47,6 +47,7 @@ export function FeaturedProducts({
           {totalPages > 1 && (
             <div className="flex items-center gap-1.5">
               <button
+                type="button"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
                 className="flex h-8 w-8 items-center justify-center rounded-full border bg-white text-slate-600 transition-colors hover:bg-muted disabled:opacity-30 disabled:hover:bg-white"
@@ -57,6 +58,7 @@ export function FeaturedProducts({
                 {page + 1} / {totalPages}
               </span>
               <button
+                type="button"
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page === totalPages - 1}
                 className="flex h-8 w-8 items-center justify-center rounded-full border bg-white text-slate-600 transition-colors hover:bg-muted disabled:opacity-30 disabled:hover:bg-white"

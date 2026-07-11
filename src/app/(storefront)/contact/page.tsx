@@ -1,108 +1,144 @@
 import type { Metadata } from "next";
-import { Phone, Mail, MapPin, Clock, MessageCircle, Truck, Facebook } from "lucide-react";
-import { COMPANY_INFO, DELIVERY_AREAS } from "@/lib/constants";
+import {
+  Facebook,
+  Instagram,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Youtube,
+} from "lucide-react";
+import { COMPANY_INFO } from "@/lib/constants";
+import { getStoreSettings } from "@/lib/api/settings";
 import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = {
   title: "ติดต่อเรา",
-  description: `ติดต่อ ${COMPANY_INFO.name} โทร ${COMPANY_INFO.phone} | LINE: ${COMPANY_INFO.line}`,
+  description: `ติดต่อ ${COMPANY_INFO.shortName} ผ่านโทรศัพท์ อีเมล และโซเชียลมีเดีย`,
 };
 
-const contactItems = [
-  { icon: Phone, label: "โทรศัพท์", value: COMPANY_INFO.phone, href: `tel:${COMPANY_INFO.phone}` },
-  { icon: Phone, label: "มือถือ / สั่งซื้อ", value: COMPANY_INFO.mobile, href: `tel:${COMPANY_INFO.mobile}` },
-  { icon: Mail, label: "อีเมล", value: COMPANY_INFO.email, href: `mailto:${COMPANY_INFO.email}` },
-  { icon: MessageCircle, label: "LINE Official", value: COMPANY_INFO.line, href: `https://line.me/R/ti/p/${COMPANY_INFO.line}` },
-  { icon: Facebook, label: "Facebook", value: `fb.com/${COMPANY_INFO.facebook}`, href: `https://facebook.com/${COMPANY_INFO.facebook}` },
-  { icon: MapPin, label: "ที่อยู่", value: COMPANY_INFO.address },
-  { icon: Clock, label: "เวลาทำการ", value: `${COMPANY_INFO.workingHours} (${COMPANY_INFO.workingHoursNote})` },
-  { icon: Truck, label: "เวลาจัดส่ง", value: COMPANY_INFO.deliveryHours },
-];
+export default async function ContactPage() {
+  const settings = await getStoreSettings();
 
-export default function ContactPage() {
+  const contactItems = [
+    {
+      icon: Phone,
+      label: "โทรศัพท์",
+      value: settings.storePhone,
+    },
+    {
+      icon: Mail,
+      label: "อีเมล",
+      value: settings.storeEmail,
+    },
+    {
+      icon: MapPin,
+      label: "ที่อยู่",
+      value: settings.storeAddress,
+    },
+    {
+      icon: Instagram,
+      label: "LINE",
+      value: settings.lineId,
+    },
+  ];
+
+  const socialLinks = [
+    { icon: Facebook, href: settings.facebookUrl, label: "Facebook" },
+    { icon: Instagram, href: COMPANY_INFO.instagramUrl, label: "Instagram" },
+    { icon: MessageCircle, href: settings.lineUrl, label: "LINE" },
+    { icon: Youtube, href: COMPANY_INFO.tiktokUrl, label: "TikTok" },
+  ];
+
+  const mapEmbedSrc =
+    COMPANY_INFO.googleMapEmbed ||
+    `https://www.google.com/maps?q=${encodeURIComponent(
+      settings.storeAddress || COMPANY_INFO.address,
+    )}&output=embed`;
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
-      <h1 className="text-center text-3xl font-bold text-gray-900 sm:text-4xl">
-        ติดต่อเรา
-      </h1>
-      <p className="mt-2 text-center text-gray-500">
-        สอบถามราคาส่ง สั่งซื้อจำนวนมาก หรือมีข้อเสนอแนะ ติดต่อเราได้เลย
-      </p>
+    <div className="bg-white">
+      {/* Hero */}
+      <section className="px-4 pt-12 pb-4 text-center sm:px-6 lg:px-8">
+        <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+          ติดต่อเรา
+        </h1>
+        <p className="mt-2 text-gray-500">
+          สอบถามสินค้า โปรโมชั่น และการสั่งซื้อสำหรับครัวเรือนหรือองค์กรได้ที่นี่
+        </p>
+      </section>
 
-      <div className="mt-12 grid gap-12 lg:grid-cols-2">
-        {/* Contact Info */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">
-            ช่องทางการติดต่อ
-          </h2>
-          <div className="mt-6 space-y-5">
-            {contactItems.map((item) => (
-              <div key={item.label} className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <item.icon className="size-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">{item.label}</p>
-                  {item.href ? (
-                    <a
-                      href={item.href}
-                      target={item.href.startsWith("http") ? "_blank" : undefined}
-                      rel={item.href.startsWith("http") ? "noopener noreferrer" : undefined}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      {item.value}
-                    </a>
-                  ) : (
-                    <p className="text-sm text-gray-900">{item.value}</p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Delivery Coverage */}
-          <div className="mt-8 rounded-xl border border-primary/20 bg-primary/5 p-5">
-            <h3 className="text-sm font-semibold text-primary">
-              พื้นที่จัดส่ง
-            </h3>
-            <p className="mt-1 text-xs text-gray-600">
-              ครอบคลุมทุกพื้นที่ในเกาะภูเก็ต
+      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="grid items-start gap-10 lg:grid-cols-2">
+          {/* Left: Get in touch */}
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+              ช่องทางการติดต่อ
+            </h2>
+            <p className="mt-3 max-w-md text-sm text-gray-500">
+              ภูเก็ตโกรเซอรี่ พร้อมให้บริการและตอบทุกคำถามของคุณ
+              เลือกช่องทางที่สะดวกได้เลย
             </p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {DELIVERY_AREAS.map((area) => (
-                <span
-                  key={area}
-                  className="rounded-full bg-white px-2.5 py-0.5 text-xs text-gray-600 ring-1 ring-gray-200"
-                >
-                  {area}
-                </span>
+
+            <div className="mt-8 grid gap-6 sm:grid-cols-2">
+              {contactItems.map((item) => (
+                <div key={item.label} className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-white">
+                    <item.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-base font-semibold text-gray-900">
+                      {item.label}
+                    </p>
+                    <p className="mt-0.5 text-sm text-gray-600">{item.value}</p>
+                  </div>
+                </div>
               ))}
+            </div>
+
+            <div className="mt-8 border-t border-gray-100 pt-6">
+              <p className="text-sm font-semibold text-gray-900">โซเชียลมีเดีย</p>
+              <div className="mt-4 flex items-center gap-3">
+                {socialLinks.map((social) => (
+                  <a
+                    key={social.label}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={social.label}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-white"
+                  >
+                    <social.icon className="h-4 w-4" />
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Google Map Embed */}
-          <div className="mt-6 overflow-hidden rounded-xl border border-gray-200">
-            <iframe
-              title="แผนที่ ภูเก็ต โกรเซอรี่"
-              src={COMPANY_INFO.googleMapEmbed}
-              className="h-64 w-full border-0"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
+          {/* Right: Form panel */}
+          <div className="rounded-2xl bg-secondary/60 p-6 sm:p-8">
+            <ContactForm />
           </div>
         </div>
 
-        {/* Contact Form */}
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900">
-            ส่งข้อความถึงเรา
-          </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            กรอกรายละเอียดด้านล่าง เราจะติดต่อกลับภายใน 1 วันทำการ
-          </p>
-          <div className="mt-6">
-            <ContactForm />
-          </div>
+        {/* Map */}
+        <div className="relative mt-12 overflow-hidden rounded-2xl border border-gray-200">
+          <iframe
+            title="แผนที่ภูเก็ตโกรเซอรี่"
+            src={mapEmbedSrc}
+            className="h-[360px] w-full border-0"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+          <a
+            href={COMPANY_INFO.googleMapUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-primary/90"
+          >
+            <MapPin className="h-4 w-4" />
+            เปิดใน Google Maps เพื่อนำทาง
+          </a>
         </div>
       </div>
     </div>

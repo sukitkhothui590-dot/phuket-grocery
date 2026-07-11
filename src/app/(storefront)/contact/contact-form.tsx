@@ -6,16 +6,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { submitContactMessage } from "@/lib/api/content";
 
 export function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
+    setError("");
+
+    const formData = new FormData(e.currentTarget);
+    const result = await submitContactMessage({
+      name: String(formData.get("name") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      phone: String(formData.get("phone") ?? "") || undefined,
+      message: String(formData.get("message") ?? ""),
+    });
+
     setLoading(false);
+
+    if (!result.success) {
+      setError(result.error ?? "ไม่สามารถส่งข้อความได้");
+      return;
+    }
+
     setSubmitted(true);
   }
 
@@ -44,13 +61,15 @@ export function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <div>
-        <Label htmlFor="name">ชื่อ-สกุล</Label>
-        <Input id="name" name="name" required className="mt-1.5" placeholder="กรอกชื่อ-สกุล" />
-      </div>
-      <div>
-        <Label htmlFor="email">อีเมล</Label>
-        <Input id="email" name="email" type="email" required className="mt-1.5" placeholder="example@email.com" />
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="name">ชื่อ-สกุล</Label>
+          <Input id="name" name="name" required className="mt-1.5" placeholder="กรอกชื่อ-สกุล" />
+        </div>
+        <div>
+          <Label htmlFor="email">อีเมล</Label>
+          <Input id="email" name="email" type="email" required className="mt-1.5" placeholder="example@email.com" />
+        </div>
       </div>
       <div>
         <Label htmlFor="phone">เบอร์โทรศัพท์</Label>
@@ -70,6 +89,7 @@ export function ContactForm() {
       <Button type="submit" className="w-full" size="lg" disabled={loading}>
         {loading ? "กำลังส่ง..." : "ส่งข้อความ"}
       </Button>
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </form>
   );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { categories } from "@/lib/mock-data";
+import type { Category } from "@/types";
 import { useState } from "react";
 import {
   Sheet,
@@ -11,14 +11,18 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import type { Category } from "@/types";
 
 interface CategoryDrawerProps {
   open: boolean;
   onClose: () => void;
+  categories: Category[];
 }
 
-export function CategoryDrawer({ open, onClose }: CategoryDrawerProps) {
+export function CategoryDrawer({
+  open,
+  onClose,
+  categories,
+}: CategoryDrawerProps) {
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
 
   const handleCategoryClick = (cat: Category) => {
@@ -72,12 +76,12 @@ export function CategoryDrawer({ open, onClose }: CategoryDrawerProps) {
                     onClick={onClose}
                     className="flex flex-1 items-center gap-3 px-5 py-3 transition-colors hover:bg-accent"
                   >
-                    <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-md border bg-muted">
+                    <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-md border bg-muted p-1">
                       {cat.image ? (
                         <img
                           src={cat.image}
                           alt={cat.name}
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-contain"
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
@@ -115,11 +119,11 @@ export function CategoryDrawer({ open, onClose }: CategoryDrawerProps) {
                           className="flex items-center gap-3 py-2 pl-8 pr-5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-primary"
                         >
                           {sub.image ? (
-                            <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded border bg-white">
+                            <div className="h-8 w-8 flex-shrink-0 overflow-hidden rounded border bg-white p-1">
                               <img
                                 src={sub.image}
                                 alt={sub.name}
-                                className="h-full w-full object-cover"
+                                className="h-full w-full object-contain"
                               />
                             </div>
                           ) : (

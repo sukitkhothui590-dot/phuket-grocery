@@ -1,6 +1,7 @@
 export type UnitType = "piece" | "box" | "case";
 
 export interface ProductUnit {
+  id?: string;
   unitType: UnitType;
   labelTh: string;
   labelEn: string;
@@ -24,6 +25,8 @@ export interface Product {
   baseStock: number;
   isFeatured?: boolean;
   isNew?: boolean;
+  averageRating?: number;
+  reviewCount?: number;
   createdAt: string;
 }
 
@@ -33,6 +36,7 @@ export interface Category {
   slug: string;
   image: string;
   description?: string;
+  productCount?: number;
   subcategories: Subcategory[];
 }
 

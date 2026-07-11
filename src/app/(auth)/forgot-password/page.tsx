@@ -15,6 +15,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import { requestPasswordReset } from "@/lib/api/auth";
 import { SITE_NAME } from "@/lib/constants";
 import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
 
@@ -27,6 +28,7 @@ type ForgotFormData = z.infer<typeof forgotSchema>;
 export default function ForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const {
     register,
@@ -36,11 +38,19 @@ export default function ForgotPasswordPage() {
     resolver: zodResolver(forgotSchema),
   });
 
-  const onSubmit = async () => {
+  const onSubmit = async (data: ForgotFormData) => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setSubmitted(true);
+    setError("");
+
+    const result = await requestPasswordReset(data.email);
     setLoading(false);
+
+    if (!result.success) {
+      setError(result.error ?? "ไม่สามารถส่งอีเมลรีเซ็ตรหัสผ่านได้");
+      return;
+    }
+
+    setSubmitted(true);
   };
 
   return (
@@ -96,6 +106,9 @@ export default function ForgotPasswordPage() {
               <Mail className="size-4" />
               {loading ? "กำลังส่ง..." : "ส่งลิงก์รีเซ็ต"}
             </Button>
+            {error && (
+              <p className="text-center text-sm text-red-600">{error}</p>
+            )}
             <p className="text-center text-sm text-muted-foreground">
               <Link href="/login" className="text-primary hover:underline">
                 กลับไปหน้าเข้าสู่ระบบ

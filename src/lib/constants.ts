@@ -1,55 +1,73 @@
 import type { BankAccount } from "@/types";
 
-export const SITE_NAME = "ภูเก็ต โกรเซอรี่";
+export const SITE_NAME = "ภูเก็ตโกรเซอรี่";
 export const SITE_NAME_EN = "Phuket Grocery";
 export const SITE_DESCRIPTION =
-  "ร้านขายส่งสินค้าอุปโภคบริโภค ราคาส่ง จัดส่งถึงร้านทั่วภูเก็ต สินค้าครบ ซื้อชิ้น กล่อง ลัง";
+  "ภูเก็ตโกรเซอรี่ แหล่งรวมสินค้าอุปโภคบริโภคครบวงจรสำหรับครัวเรือน ร้านอาหาร โรงแรม และผู้ประกอบการในจังหวัดภูเก็ต";
 export const SITE_URL = "https://phuketgrocery.com";
 
 export const COMPANY_INFO = {
-  name: "ห้างหุ้นส่วนจำกัด ภูเก็ต โกรเซอรี่",
-  shortName: "ภูเก็ต โกรเซอรี่",
+  name: "ภูเก็ตโกรเซอรี่ (Phuket Grocery)",
+  shortName: "ภูเก็ตโกรเซอรี่",
   registrationNo: "0833542001808",
-  businessType: "ขายปลีกสินค้าอุปโภค - บริโภค",
-  businessCategory: "ร้านขายของชำ",
-  businessDescription: "จำหน่ายสินค้าอุปโภค บริโภค",
-  phone: "076-354-789",
-  mobile: "093-549-8822",
-  fax: "076-354-790",
-  email: "sales@phuketgrocery.com",
+  businessType: "ค้าปลีกและค้าส่งสินค้าอุปโภคบริโภค",
+  businessCategory: "ซูเปอร์มาร์เก็ตและคลังสินค้าท้องถิ่น",
+  businessDescription:
+    "ศูนย์รวมสินค้าอุปโภค-บริโภคครบวงจร รองรับทั้งการซื้อของเข้าบ้านของครอบครัว และการจัดหาวัตถุดิบยกลังสำหรับผู้ประกอบการ ร้านอาหาร โรงแรม และร้านค้าปลีกรายย่อยในพื้นที่",
+  phone: "094-582-1435",
+  mobile: "094-582-1435",
+  fax: "076-XXX-XXX",
+  b2bPhone: "094-582-1435",
+  email: "contact@phuketgrocery.com",
+  supportEmail: "support@phuketgrocery.com",
   line: "@phuketgrocery",
-  facebook: "PhuketGrocery",
+  lineUrl: "[ลิงก์เพิ่มเพื่อน]",
+  facebook: "ภูเก็ตโกรเซอรี่ - Phuket Grocery",
+  facebookUrl: "[ลิงก์หน้าเพจ]",
+  instagram: "@phuketgrocery",
+  instagramUrl: "[ลิงก์ Instagram]",
+  tiktok: "@phuketgrocery",
+  tiktokUrl: "[ลิงก์ TikTok]",
   address:
-    "54/51 ถนนอ๋องซิมผ่าย ตำบลตลาดใหญ่ อำเภอเมืองภูเก็ต จ.ภูเก็ต 83000",
-  addressShort: "ถ.อ๋องซิมผ่าย ต.ตลาดใหญ่ อ.เมืองภูเก็ต",
-  workingHours: "จันทร์ - เสาร์ 07:30 - 17:30 น.",
-  workingHoursNote: "หยุดวันอาทิตย์ และวันหยุดนักขัตฤกษ์",
-  deliveryHours: "จัดส่งทุกวัน จันทร์-เสาร์ 09:00-16:00 น.",
-  googleMapUrl: "https://maps.google.com/?q=7.8804,98.3923",
-  googleMapEmbed:
-    "https://maps.google.com/maps?q=7.8804,98.3923&z=15&output=embed",
+    "54/51 ถ. อ๋องซิมผ่าย ตำบลตลาดใหญ่ อำเภอเมืองภูเก็ต จังหวัดภูเก็ต 83000",
+  addressShort: "ตำบลตลาดใหญ่ อำเภอเมืองภูเก็ต จังหวัดภูเก็ต",
+  workingHours: "เปิดให้บริการทุกวัน ตั้งแต่เวลา 08:00 น. – 21:00 น.",
+  workingHoursNote: "เปิดให้บริการทุกวัน",
+  deliveryHours: "กรุณาติดต่อทีมงานเพื่อสอบถามรอบจัดส่งและบริการสำหรับองค์กร",
+  googleMapUrl: "https://maps.app.goo.gl/zHrRLVtJFz4pgr2r9",
+  googleMapEmbed: "",
   googlePlaceId: "ChIJxxxxxxxxxxxxx",
-  yearEstablished: 2015,
-  totalProducts: "10,000+",
-  deliveryCoverage: "ทั่วเกาะภูเก็ต",
-};
+  yearEstablished: null,
+  yearsInBusinessLabel: "[ใส่จำนวนปี]",
+  totalProducts: "สินค้าครบครันสำหรับครัวเรือนและผู้ประกอบการ",
+  deliveryCoverage: "ทั่วจังหวัดภูเก็ต",
+  heroTagline:
+    "แหล่งรวมสินค้าครบวงจร ตอบโจทย์ทุกความต้องการของครัวเรือนและผู้ประกอบการ",
+  vision:
+    "มุ่งสู่การเป็นซูเปอร์มาร์เก็ตท้องถิ่นอันดับหนึ่งในใจชาวภูเก็ต ที่ส่งมอบสินค้าคุณภาพในราคาที่คุ้มค่าที่สุด พร้อมบริการที่ประทับใจ",
+  missions: [
+    "จัดหาและคัดสรรสินค้าอุปโภคบริโภคที่หลากหลาย สด ใหม่ และปลอดภัย",
+    "รักษามาตรฐานราคาที่ยุติธรรม เพื่อสนับสนุนทั้งผู้บริโภคและขับเคลื่อนเศรษฐกิจท้องถิ่น",
+    "พัฒนาช่องทางการจัดจำหน่ายและการบริการให้ทันสมัย สะดวกสบาย เข้าถึงง่ายสำหรับทุกคน",
+  ],
+} as const;
 
 export const BANK_ACCOUNTS: BankAccount[] = [
   {
     bankName: "ธนาคารกสิกรไทย (KBANK)",
-    accountName: "หจก. ภูเก็ต โกรเซอรี่",
+    accountName: "ภูเก็ตโกรเซอรี่",
     accountNumber: "630-2-XXXXX-X",
-    branch: "สาขาเซ็นทรัล ภูเก็ต ฟลอเรสต้า",
+    branch: "สาขาภูเก็ต",
   },
   {
     bankName: "ธนาคารไทยพาณิชย์ (SCB)",
-    accountName: "หจก. ภูเก็ต โกรเซอรี่",
+    accountName: "ภูเก็ตโกรเซอรี่",
     accountNumber: "649-XXXXXX-X",
-    branch: "สาขาถนนเทพกระษัตรี",
+    branch: "สาขาภูเก็ต",
   },
   {
     bankName: "ธนาคารกรุงไทย (KTB)",
-    accountName: "หจก. ภูเก็ต โกรเซอรี่",
+    accountName: "ภูเก็ตโกรเซอรี่",
     accountNumber: "827-X-XXXXX-X",
     branch: "สาขาภูเก็ต",
   },
@@ -74,17 +92,20 @@ export const SHIPPING_COST = {
 
 export const FREE_SHIPPING_THRESHOLD = 1500;
 
+/** COD fee per order (can be overridden by public setting `cod_fee`) */
+export const COD_FEE = 20;
+
 export const DELIVERY_AREAS = [
-  "อ.เมืองภูเก็ต",
-  "อ.กะทู้",
-  "อ.ถลาง",
+  "อำเภอเมืองภูเก็ต",
+  "กะทู้",
+  "ถลาง",
   "ป่าตอง",
-  "กะรน",
-  "กะตะ",
   "ราไวย์",
   "ฉลอง",
+  "กะรน",
+  "กะตะ",
   "เชิงทะเล",
   "ในยาง",
   "ไม้ขาว",
-  "สะพานหิน",
+  "พื้นที่อื่นในจังหวัดภูเก็ต",
 ];

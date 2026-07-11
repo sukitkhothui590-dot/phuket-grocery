@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { getPlaceholderUrl } from "@/lib/placeholder";
 
 interface PromoBanner {
   id: string;
@@ -7,8 +6,9 @@ interface PromoBanner {
   subtitle: string;
   cta: string;
   link: string;
-  bgColor: string;
-  textColor: string;
+  image: string;
+  bgClass: string;
+  textClass: string;
 }
 
 const promoBanners: PromoBanner[] = [
@@ -18,8 +18,9 @@ const promoBanners: PromoBanner[] = [
     subtitle: "ซื้อยกลังประหยัดสูงสุด 30%",
     cta: "ช้อปเลย",
     link: "/categories",
-    bgColor: "bg-primary",
-    textColor: "text-primary-foreground",
+    image: "/promo/promo-1.png",
+    bgClass: "bg-primary",
+    textClass: "text-primary-foreground",
   },
   {
     id: "pb-2",
@@ -27,8 +28,9 @@ const promoBanners: PromoBanner[] = [
     subtitle: "กว่า 1,000 รายการ จัดส่งทั่วภูเก็ต",
     cta: "ดูสินค้า",
     link: "/categories",
-    bgColor: "bg-slate-800",
-    textColor: "text-white",
+    image: "/promo/promo-2.png",
+    bgClass: "bg-slate-800",
+    textClass: "text-white",
   },
   {
     id: "pb-3",
@@ -36,35 +38,39 @@ const promoBanners: PromoBanner[] = [
     subtitle: "จัดส่งรวดเร็ว 1-2 วันถึงหน้าร้าน",
     cta: "สั่งเลย",
     link: "/categories",
-    bgColor: "bg-primary",
-    textColor: "text-white",
+    image: "/promo/promo-3.png",
+    bgClass: "bg-primary",
+    textClass: "text-white",
   },
 ];
 
 export function PromotionGrid() {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-6">
+    <section id="promotions" className="mx-auto max-w-7xl scroll-mt-28 px-4 py-6">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {promoBanners.map((banner) => (
           <Link
             key={banner.id}
             href={banner.link}
-            className={`group relative flex min-h-[160px] flex-col justify-between overflow-hidden rounded-lg p-5 transition-shadow hover:shadow-lg sm:min-h-[180px] ${banner.bgColor} ${banner.textColor}`}
+            className={`group relative flex min-h-[160px] flex-col justify-between overflow-hidden rounded-lg border border-slate-200 p-5 transition-shadow hover:shadow-lg sm:min-h-[180px] ${banner.bgClass} ${banner.textClass}`}
           >
-            <div>
+            <div className="relative z-10">
               <h3 className="text-lg font-bold leading-tight sm:text-xl">
                 {banner.title}
               </h3>
-              <p className="mt-1 text-sm opacity-80">{banner.subtitle}</p>
+              <p className="mt-1 max-w-[18rem] text-sm opacity-85">
+                {banner.subtitle}
+              </p>
             </div>
-            <span className="mt-3 inline-flex w-fit items-center rounded-md bg-white/20 px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-colors group-hover:bg-white/30">
+
+            <span className="relative z-10 mt-3 inline-flex w-fit items-center rounded-md bg-white/20 px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-colors group-hover:bg-white/30">
               {banner.cta} →
             </span>
 
             <img
-              src={getPlaceholderUrl(160, 160, "Promo")}
+              src={banner.image}
               alt=""
-              className="absolute -bottom-2 -right-2 h-28 w-28 rounded-md object-cover opacity-20 sm:h-32 sm:w-32"
+              className="absolute -bottom-4 -right-4 h-40 w-40 rounded-md object-cover opacity-60 sm:h-48 sm:w-48"
             />
           </Link>
         ))}

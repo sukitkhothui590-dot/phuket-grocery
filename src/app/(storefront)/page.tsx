@@ -1,6 +1,7 @@
 import { HeroBanner } from "@/components/home/hero-banner";
+import { HomePromoCarousel } from "@/components/home/home-promo-carousel";
+import { HomeCouponCategories } from "@/components/home/home-coupon-categories";
 import { PromotionGrid } from "@/components/home/promotion-grid";
-import { CategoryGrid } from "@/components/home/category-grid";
 import { FeaturedProducts } from "@/components/home/featured-products";
 import { CategoryProductSection } from "@/components/home/category-product-section";
 import { TrustBadges } from "@/components/home/trust-badges";
@@ -9,16 +10,18 @@ import { NewsSection } from "@/components/home/news-section";
 import { getBanners, getBlogPosts, getGoogleReviews } from "@/lib/api/content";
 import {
   getFeaturedProducts,
+  getPromoProducts,
   getCategories,
   getProductsByCategory,
 } from "@/lib/api/products";
 
 export default async function HomePage() {
-  const [banners, categories, featuredProducts, reviews, posts] =
+  const [banners, categories, featuredProducts, promoProducts, googleData, posts] =
     await Promise.all([
       getBanners(),
       getCategories(),
       getFeaturedProducts(),
+      getPromoProducts(),
       getGoogleReviews(),
       getBlogPosts(3),
     ]);
@@ -31,7 +34,8 @@ export default async function HomePage() {
   return (
     <>
       <HeroBanner banners={banners} />
-      <CategoryGrid categories={categories} />
+      <HomePromoCarousel products={promoProducts} />
+      <HomeCouponCategories />
       <PromotionGrid />
       <FeaturedProducts title="สินค้าแนะนำ" products={featuredProducts} />
 
@@ -44,7 +48,7 @@ export default async function HomePage() {
       ))}
 
       <TrustBadges />
-      <GoogleReviews reviews={reviews} />
+      <GoogleReviews reviews={googleData.reviews} reviewLink={googleData.reviewLink} />
       <NewsSection posts={posts} />
     </>
   );

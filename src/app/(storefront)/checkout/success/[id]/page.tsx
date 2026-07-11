@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getOrderById } from "@/lib/api/orders";
+import { getAccessToken } from "@/lib/api/token";
 import { ORDER_STATUS_MAP } from "@/lib/constants";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -28,7 +29,7 @@ export default function CheckoutSuccessPage() {
         /* sessionStorage unavailable */
       }
 
-      const apiOrder = await getOrderById(id);
+      const apiOrder = await getOrderById(id, getAccessToken());
       if (apiOrder) setOrder(apiOrder);
     }
     if (id) load();

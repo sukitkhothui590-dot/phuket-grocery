@@ -13,6 +13,7 @@ export type PaymentMethod = "bank_transfer" | "cod";
 export type ShippingMethod = "standard" | "express";
 
 export interface OrderItem {
+  id?: string;
   productId: string;
   productName: string;
   productImage: string;
@@ -51,6 +52,8 @@ export interface Address {
   subDistrict: string;
   province: string;
   postalCode: string;
+  lat?: number;
+  lng?: number;
   isDefault: boolean;
 }
 

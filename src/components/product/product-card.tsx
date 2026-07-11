@@ -1,18 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, Eye, Heart } from "lucide-react";
+import { useState } from "react";
+import { ShoppingCart, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { ProductRating } from "@/components/product/product-rating";
 import type { Product } from "@/types";
-import { useCartStore } from "@/stores/cart-store";
-import { getPlaceholderUrl } from "@/lib/placeholder";
+import { addToCart } from "@/lib/cart-actions";
 
 interface ProductCardProps {
   product: Product;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const addItem = useCartStore((s) => s.addItem);
+  const [added, setAdded] = useState(false);
   const lowestUnit = product.units[0];
 
   const hasDiscount =
@@ -21,28 +22,26 @@ export function ProductCard({ product }: ProductCardProps) {
     ? Math.round(
         ((lowestUnit.compareAtPrice! - lowestUnit.price) /
           lowestUnit.compareAtPrice!) *
-          100
+          100,
       )
     : 0;
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addItem({
+    await addToCart({
       productId: product.id,
       productName: product.name,
       productImage: product.images[0] ?? "",
       selectedUnit: lowestUnit,
       quantity: 1,
     });
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 1500);
   };
 
   return (
-    <Link
-      href={`/products/${product.slug}`}
-      className="group relative flex flex-col overflow-hidden rounded-lg border bg-white transition-all hover:shadow-lg"
-    >
-      {/* Badges */}
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-lg border bg-white transition-all hover:shadow-lg">
       <div className="absolute left-2 top-2 z-10 flex flex-col gap-1">
         {hasDiscount && (
           <Badge className="bg-red-500 text-white hover:bg-red-500">
@@ -56,84 +55,76 @@ export function ProductCard({ product }: ProductCardProps) {
         )}
       </div>
 
-      {/* Quick actions on hover */}
-      <div className="absolute right-2 top-2 z-10 flex flex-col gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md transition-colors hover:bg-primary hover:text-white"
-        >
-          <Heart className="h-3.5 w-3.5" />
-        </button>
-        <button
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md transition-colors hover:bg-primary hover:text-white"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-        >
-          <Eye className="h-3.5 w-3.5" />
-        </button>
-      </div>
-
-      {/* Image */}
-      <div className="relative aspect-square overflow-hidden bg-muted">
+      <Link
+        href={`/products/${product.slug}`}
+        className="relative aspect-square overflow-hidden bg-muted"
+      >
         <img
-          src={getPlaceholderUrl(300, 300)}
+          src={product.images[0]}
           alt={product.name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
+      </Link>
 
-        {/* Desktop: slide-up add-to-cart overlay on hover */}
-        <div className="absolute inset-x-0 bottom-0 hidden translate-y-full bg-primary/90 py-2 text-center text-sm font-medium text-white transition-transform duration-300 group-hover:translate-y-0 sm:block">
-          <button
-            onClick={handleAddToCart}
-            className="inline-flex items-center gap-1.5"
-          >
-            <ShoppingCart className="h-4 w-4" />
-            เพิ่มลงตะกร้า
-          </button>
-        </div>
-
-        {/* Mobile: persistent cart icon button */}
-        <button
-          onClick={handleAddToCart}
-          className="absolute bottom-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-white shadow-md sm:hidden"
-        >
-          <ShoppingCart className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Info */}
       <div className="flex flex-1 flex-col p-3">
-        <h3 className="line-clamp-2 text-sm font-medium text-foreground group-hover:text-primary">
-          {product.name}
-        </h3>
+        <Link href={`/products/${product.slug}`}>
+          <h3 className="line-clamp-2 text-sm font-medium text-foreground transition-colors hover:text-primary">
+            {product.name}
+          </h3>
+        </Link>
+
+        <ProductRating
+          rating={product.averageRating}
+          count={product.reviewCount}
+          className="mt-1"
+        />
 
         <p className="mt-1 text-xs text-muted-foreground">
           {lowestUnit.labelTh}
         </p>
 
-        {/* Price */}
-        <div className="mt-auto flex items-baseline gap-2 pt-2">
-          <span className="text-base font-bold text-primary">
-            ฿{lowestUnit.price.toLocaleString()}
-          </span>
+        <div className="mt-auto flex items-end gap-2 pt-2">
+          <div className="flex items-baseline gap-0.5 text-primary">
+            <span className="text-base font-bold leading-none">฿</span>
+            <span className="text-[28px] font-extrabold leading-none tracking-tight">
+              {lowestUnit.price.toLocaleString()}
+            </span>
+          </div>
           {hasDiscount && (
-            <span className="text-xs text-muted-foreground line-through">
+            <span className="mb-0.5 text-sm text-muted-foreground line-through">
               ฿{lowestUnit.compareAtPrice!.toLocaleString()}
             </span>
           )}
         </div>
 
         {product.units.length > 1 && (
-          <p className="mt-1.5 text-[11px] text-muted-foreground">
+          <p className="mt-1 text-[11px] text-muted-foreground">
             มี {product.units.length} หน่วยนับ
           </p>
         )}
+
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          className={`mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-bold text-white shadow-sm transition-all active:scale-[0.98] ${
+            added
+              ? "bg-green-600 hover:bg-green-600"
+              : "bg-primary hover:bg-primary/90"
+          }`}
+        >
+          {added ? (
+            <>
+              <Check className="h-4 w-4" strokeWidth={2.5} />
+              เพิ่มแล้ว
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="h-4 w-4" strokeWidth={2.5} />
+              เพิ่มลงตะกร้า
+            </>
+          )}
+        </button>
       </div>
-    </Link>
+    </article>
   );
 }

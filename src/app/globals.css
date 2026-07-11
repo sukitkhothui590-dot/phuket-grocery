@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "leaflet/dist/leaflet.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -8,7 +9,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,38 +49,38 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0.014 197);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0.014 197);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.014 197);
-  --primary: #01A1AF;
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.97 0.008 197);
-  --secondary-foreground: oklch(0.25 0.05 197);
-  --muted: oklch(0.968 0.007 197);
-  --muted-foreground: oklch(0.55 0.02 197);
-  --accent: oklch(0.97 0.014 197);
-  --accent-foreground: oklch(0.25 0.05 197);
-  --destructive: oklch(0.55 0.2 27);
-  --border: oklch(0.922 0.01 197);
-  --input: oklch(0.922 0.01 197);
-  --ring: #01A1AF;
-  --chart-1: #01A1AF;
-  --chart-2: #02b8c8;
-  --chart-3: #018490;
-  --chart-4: #4dc9d4;
-  --chart-5: #016d78;
+  --background: #ffffff;
+  --foreground: #1a2b2c;
+  --card: #ffffff;
+  --card-foreground: #1a2b2c;
+  --popover: #ffffff;
+  --popover-foreground: #1a2b2c;
+  --primary: #19b3b1;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f9f9;
+  --secondary-foreground: #1a2b2c;
+  --muted: #f4f9f9;
+  --muted-foreground: #587174;
+  --accent: #eff7f7;
+  --accent-foreground: #1a2b2c;
+  --destructive: #e32329;
+  --border: #d9e8e7;
+  --input: #d9e8e7;
+  --ring: #19b3b1;
+  --chart-1: #19b3b1;
+  --chart-2: #1f8f8d;
+  --chart-3: #62c9c7;
+  --chart-4: #e32329;
+  --chart-5: #1a2b2c;
   --radius: 0.5rem;
-  --sidebar: oklch(0.985 0.005 197);
-  --sidebar-foreground: oklch(0.145 0.014 197);
-  --sidebar-primary: #01A1AF;
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.97 0.014 197);
-  --sidebar-accent-foreground: oklch(0.25 0.05 197);
-  --sidebar-border: oklch(0.922 0.01 197);
-  --sidebar-ring: #01A1AF;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1a2b2c;
+  --sidebar-primary: #19b3b1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f4f9f9;
+  --sidebar-accent-foreground: #1a2b2c;
+  --sidebar-border: #d9e8e7;
+  --sidebar-ring: #19b3b1;
 }
 
 @layer base {
@@ -101,5 +102,112 @@
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  .pg-map-pin-wrapper {
+    background: transparent;
+    border: 0;
+  }
+
+  .pg-map-pin {
+    display: block;
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: #e32329;
+    border: 3px solid #ffffff;
+    box-shadow: 0 6px 18px rgba(227, 35, 41, 0.32);
+  }
+
+  .pg-delivery-pin-wrapper,
+  .pg-courier-pin-wrapper {
+    background: transparent;
+    border: 0;
+  }
+
+  .pg-delivery-pin {
+    display: block;
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: #fb7185;
+    border: 4px solid #ffffff;
+    box-shadow: 0 10px 22px rgba(244, 63, 94, 0.35);
+  }
+
+  .pg-courier-pin {
+    position: relative;
+    display: block;
+    width: 26px;
+    height: 26px;
+    border-radius: 9999px;
+    background: #22c55e;
+    border: 4px solid #ffffff;
+    box-shadow: 0 12px 24px rgba(34, 197, 94, 0.3);
+  }
+
+  .pg-courier-pin::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+    border-radius: 9999px;
+    border: 2px solid rgba(34, 197, 94, 0.22);
+  }
+
+  /* Deal section playful touches */
+  @keyframes pg-shine {
+    0% {
+      transform: translateX(-120%) skewX(-20deg);
+    }
+    60%,
+    100% {
+      transform: translateX(220%) skewX(-20deg);
+    }
+  }
+
+  .pg-shine::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 40%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.55),
+      transparent
+    );
+    transform: translateX(-120%) skewX(-20deg);
+  }
+
+  .group:hover .pg-shine::after {
+    animation: pg-shine 0.9s ease-out;
+  }
+
+  @keyframes pg-bar-grow {
+    from {
+      width: 0%;
+    }
+  }
+
+  .pg-bar-fill {
+    animation: pg-bar-grow 1s ease-out;
+  }
+
+  @keyframes pg-flame {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.15);
+      opacity: 0.85;
+    }
+  }
+
+  .pg-flame {
+    animation: pg-flame 1.6s ease-in-out infinite;
   }
 }

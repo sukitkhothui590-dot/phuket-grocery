@@ -1,26 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ChevronRight, Mail, Package, Phone, Settings, Ticket, Truck, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth-store";
 import { getOrders } from "@/lib/api/orders";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { matchesOrderGroup } from "@/lib/order-status";
 import type { Order } from "@/types";
-import {
-  User,
-  Package,
-  Settings,
-  ChevronRight,
-  Mail,
-  Phone,
-} from "lucide-react";
 
 export default function AccountPage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuthStore();
+  const { user, isAuthenticated, accessToken } = useAuthStore();
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
@@ -31,138 +23,168 @@ export default function AccountPage() {
 
   useEffect(() => {
     async function loadOrders() {
-      const data = await getOrders();
-      setOrders(data);
+      if (!accessToken) return;
+      setOrders(await getOrders(accessToken));
     }
-    loadOrders();
-  }, []);
+
+    void loadOrders();
+  }, [accessToken]);
+
+  const stats = useMemo(() => {
+    return {
+      total: orders.length,
+      active: orders.filter((order) => matchesOrderGroup(order, "active")).length,
+      waiting: orders.filter((order) => matchesOrderGroup(order, "waiting")).length,
+      completed: orders.filter((order) => matchesOrderGroup(order, "completed")).length,
+    };
+  }, [orders]);
 
   if (!user) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-muted-foreground">กำลังโหลด...</p>
+      <div className="flex min-h-[50vh] items-center justify-center text-sm text-muted-foreground">
+        กำลังโหลดบัญชีผู้ใช้...
       </div>
     );
   }
 
-  const pendingCount = orders.filter(
-    (o) => o.status === "pending_payment" || o.status === "pending_verify"
-  ).length;
-
   return (
-    <div className="container mx-auto max-w-4xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold">บัญชีของฉัน</h1>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="size-5" />
-              ข้อมูลส่วนตัว
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-lg font-medium">
-              {user.firstName} {user.lastName}
-            </p>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Mail className="size-4" />
-              {user.email}
+    <main className="bg-slate-50 py-8">
+      <section className="mx-auto max-w-6xl px-4">
+        <div className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <article className="rounded-2xl border bg-white shadow-sm">
+            <div className="border-b px-6 py-6">
+              <p className="text-sm font-medium text-primary">My Account</p>
+              <h1 className="mt-1 text-2xl font-semibold text-foreground">
+                บัญชีของฉัน
+              </h1>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Phone className="size-4" />
-              {user.phone}
-            </div>
-            <Link
-              href="/account/profile"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "mt-2 gap-1"
-              )}
-            >
-              แก้ไขข้อมูล
-              <ChevronRight className="size-3.5" />
-            </Link>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="size-5" />
-              คำสั่งซื้อ
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg bg-primary/5 p-3 text-center">
-                <p className="text-2xl font-bold text-primary">
-                  {orders.length}
-                </p>
-                <p className="text-xs text-muted-foreground">ทั้งหมด</p>
+            <div className="space-y-4 px-6 py-6">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <User className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-foreground">
+                    {user.firstName} {user.lastName}
+                  </p>
+                  <p className="text-sm text-slate-500">ลูกค้าสมาชิก Phuket Grocery</p>
+                </div>
               </div>
-              <div className="rounded-lg bg-yellow-50 p-3 text-center">
-                <p className="text-2xl font-bold text-yellow-600">
-                  {pendingCount}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  กำลังดำเนินการ
+
+              <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-slate-400" />
+                  <span>{user.email}</span>
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-slate-400" />
+                  <span>{user.phone}</span>
+                </div>
+              </div>
+
+              <Link href="/account/profile">
+                <Button variant="outline" className="w-full rounded-full">
+                  แก้ไขข้อมูลส่วนตัว
+                </Button>
+              </Link>
+            </div>
+          </article>
+
+          <div className="space-y-6">
+            <article className="rounded-2xl border bg-white shadow-sm">
+              <div className="border-b px-6 py-6">
+                <h2 className="text-xl font-semibold text-foreground">
+                  สถานะคำสั่งซื้อ
+                </h2>
+                <p className="mt-2 text-sm text-slate-500">
+                  เช็กภาพรวมคำสั่งซื้อที่กำลังดำเนินการ รอรับสินค้า และรายการที่จัดส่งสำเร็จแล้ว
                 </p>
               </div>
-            </div>
-            <Link
-              href="/account/orders"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "sm" }),
-                "mt-2 gap-1"
-              )}
-            >
-              ดูคำสั่งซื้อทั้งหมด
-              <ChevronRight className="size-3.5" />
-            </Link>
-          </CardContent>
-        </Card>
 
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="size-5" />
-              เมนูลัด
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {[
-                {
-                  label: "คำสั่งซื้อของฉัน",
-                  href: "/account/orders",
-                  icon: Package,
-                },
-                {
-                  label: "แก้ไขข้อมูลส่วนตัว",
-                  href: "/account/profile",
-                  icon: User,
-                },
-                {
-                  label: "จัดการที่อยู่",
-                  href: "/account/profile",
-                  icon: Settings,
-                },
-              ].map((link) => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
-                >
-                  <link.icon className="size-5 text-primary" />
-                  <span className="text-sm font-medium">{link.label}</span>
-                  <ChevronRight className="ml-auto size-4 text-muted-foreground" />
+              <div className="grid gap-4 px-6 py-6 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border bg-slate-50 p-4">
+                  <p className="text-sm text-slate-500">ทั้งหมด</p>
+                  <p className="mt-2 text-3xl font-semibold text-foreground">
+                    {stats.total}
+                  </p>
+                </div>
+                <div className="rounded-2xl border bg-sky-50 p-4">
+                  <p className="text-sm text-slate-500">สั่งสินค้า</p>
+                  <p className="mt-2 text-3xl font-semibold text-sky-700">
+                    {stats.active}
+                  </p>
+                </div>
+                <div className="rounded-2xl border bg-indigo-50 p-4">
+                  <p className="text-sm text-slate-500">รอสินค้า</p>
+                  <p className="mt-2 text-3xl font-semibold text-indigo-700">
+                    {stats.waiting}
+                  </p>
+                </div>
+                <div className="rounded-2xl border bg-emerald-50 p-4">
+                  <p className="text-sm text-slate-500">รับสินค้าแล้ว</p>
+                  <p className="mt-2 text-3xl font-semibold text-emerald-700">
+                    {stats.completed}
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t px-6 py-5">
+                <Link href="/account/orders">
+                  <Button className="rounded-full px-5">ดูคำสั่งซื้อทั้งหมด</Button>
                 </Link>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+              </div>
+            </article>
+
+            <article className="rounded-2xl border bg-white shadow-sm">
+              <div className="border-b px-6 py-5">
+                <h2 className="text-lg font-semibold text-foreground">ทางลัด</h2>
+              </div>
+
+              <div className="grid gap-3 px-6 py-6 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  {
+                    label: "คูปองของฉัน",
+                    href: "/account/coupons",
+                    icon: Ticket,
+                  },
+                  {
+                    label: "คำสั่งซื้อของฉัน",
+                    href: "/account/orders",
+                    icon: Package,
+                  },
+                  {
+                    label: "รอรับสินค้า",
+                    href: "/account/orders",
+                    icon: Truck,
+                  },
+                  {
+                    label: "จัดการโปรไฟล์",
+                    href: "/account/profile",
+                    icon: Settings,
+                  },
+                ].map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className="flex items-center gap-3 rounded-2xl border bg-slate-50 px-4 py-4 transition-colors hover:border-primary/30 hover:bg-white"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <item.icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {item.label}
+                      </p>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                  </Link>
+                ))}
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }

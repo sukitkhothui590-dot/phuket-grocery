@@ -6,6 +6,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthStore } from "@/stores/auth-store";
+import { updateProfile } from "@/lib/api/auth";
+import {
+  createAddress,
+  deleteAddress,
+  setDefaultAddress,
+  updateAddress,
+} from "@/lib/api/addresses";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,10 +61,14 @@ type AddressFormData = z.infer<typeof addressSchema>;
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isAuthenticated, updateUser } = useAuthStore();
+  const { user, isAuthenticated, updateUser, accessToken } = useAuthStore();
   const [profileSaved, setProfileSaved] = useState(false);
+  const [profileError, setProfileError] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [addressError, setAddressError] = useState("");
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -98,8 +109,31 @@ export default function ProfilePage() {
     );
   }
 
-  const handleProfileSubmit = (data: ProfileFormData) => {
-    updateUser(data);
+  const handleProfileSubmit = async (data: ProfileFormData) => {
+    if (!accessToken) return;
+
+    setProfileLoading(true);
+    setProfileError("");
+
+    const result = await updateProfile(accessToken, {
+      name: `${data.firstName} ${data.lastName}`.trim(),
+      phone: data.phone,
+      email: data.email,
+    });
+
+    setProfileLoading(false);
+
+    if (!result.success) {
+      setProfileError(result.error ?? "บันทึกข้อมูลไม่สำเร็จ");
+      return;
+    }
+
+    updateUser({
+      firstName: result.user?.firstName ?? data.firstName,
+      lastName: result.user?.lastName ?? data.lastName,
+      email: result.user?.email ?? data.email,
+      phone: result.user?.phone ?? data.phone,
+    });
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 3000);
   };
@@ -137,35 +171,72 @@ export default function ProfilePage() {
     setAddressDialogOpen(true);
   };
 
-  const handleAddressSave = (data: AddressFormData) => {
-    if (editingAddress) {
-      const updated = user.addresses.map((a) =>
-        a.id === editingAddress.id ? { ...a, ...data } : a
-      );
-      updateUser({ addresses: updated });
-    } else {
-      const newAddr: Address = {
-        ...data,
-        id: `addr-${Date.now()}`,
-        addressLine2: data.addressLine2 || undefined,
-        isDefault: data.isDefault || false,
-      };
-      updateUser({ addresses: [...user.addresses, newAddr] });
+  const handleAddressSave = async (data: AddressFormData) => {
+    if (!accessToken) return;
+
+    setAddressLoading(true);
+    setAddressError("");
+
+    const payload = {
+      ...data,
+      addressLine2: data.addressLine2 || undefined,
+      isDefault: data.isDefault || false,
+    };
+
+    const result = editingAddress
+      ? await updateAddress(accessToken, editingAddress.id, payload)
+      : await createAddress(accessToken, payload);
+
+    setAddressLoading(false);
+
+    if (!result.success || !result.address) {
+      setAddressError(result.error ?? "บันทึกที่อยู่ไม่สำเร็จ");
+      return;
     }
+
+    if (editingAddress) {
+      updateUser({
+        addresses: user.addresses.map((address) =>
+          address.id === editingAddress.id ? result.address! : address,
+        ),
+      });
+    } else {
+      updateUser({
+        addresses: [...user.addresses, result.address],
+      });
+    }
+
     setAddressDialogOpen(false);
+    setAddressError("");
   };
 
-  const handleDeleteAddress = (addrId: string) => {
+  const handleDeleteAddress = async (addrId: string) => {
+    if (!accessToken) return;
+
+    const result = await deleteAddress(accessToken, addrId);
+    if (!result.success) {
+      setAddressError(result.error ?? "ลบที่อยู่ไม่สำเร็จ");
+      return;
+    }
+
     updateUser({
-      addresses: user.addresses.filter((a) => a.id !== addrId),
+      addresses: user.addresses.filter((address) => address.id !== addrId),
     });
   };
 
-  const handleSetDefault = (addrId: string) => {
+  const handleSetDefault = async (addrId: string) => {
+    if (!accessToken) return;
+
+    const result = await setDefaultAddress(accessToken, addrId);
+    if (!result.success) {
+      setAddressError(result.error ?? "ตั้งค่าเริ่มต้นไม่สำเร็จ");
+      return;
+    }
+
     updateUser({
-      addresses: user.addresses.map((a) => ({
-        ...a,
-        isDefault: a.id === addrId,
+      addresses: user.addresses.map((address) => ({
+        ...address,
+        isDefault: address.id === addrId,
       })),
     });
   };
@@ -241,12 +312,17 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button type="submit">บันทึกข้อมูล</Button>
+              <Button type="submit" disabled={profileLoading}>
+                {profileLoading ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+              </Button>
               {profileSaved && (
                 <span className="flex items-center gap-1 text-sm text-green-600">
                   <Check className="size-4" />
                   บันทึกเรียบร้อยแล้ว
                 </span>
+              )}
+              {profileError && (
+                <span className="text-sm text-red-600">{profileError}</span>
               )}
             </div>
           </form>
@@ -270,6 +346,9 @@ export default function ProfilePage() {
           </CardAction>
         </CardHeader>
         <CardContent>
+          {addressError && (
+            <p className="mb-3 text-sm text-red-600">{addressError}</p>
+          )}
           {user.addresses.length === 0 ? (
             <p className="py-8 text-center text-muted-foreground">
               ยังไม่มีที่อยู่ กรุณาเพิ่มที่อยู่จัดส่ง
@@ -444,8 +523,12 @@ export default function ProfilePage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="submit">
-                {editingAddress ? "บันทึกการเปลี่ยนแปลง" : "เพิ่มที่อยู่"}
+              <Button type="submit" disabled={addressLoading}>
+                {addressLoading
+                  ? "กำลังบันทึก..."
+                  : editingAddress
+                    ? "บันทึกการเปลี่ยนแปลง"
+                    : "เพิ่มที่อยู่"}
               </Button>
             </DialogFooter>
           </form>

@@ -1,19 +1,7 @@
 export * from "./product";
 export * from "./order";
 export * from "./user";
-
-export interface Coupon {
-  id: string;
-  code: string;
-  discountType: "fixed" | "percentage";
-  discountValue: number;
-  minPurchase?: number;
-  maxDiscount?: number;
-  usageLimit: number;
-  usedCount: number;
-  expiresAt: string;
-  isActive: boolean;
-}
+export * from "./coupon";
 
 export interface BlogPost {
   id: string;
@@ -58,4 +46,6 @@ export interface PromotionCard {
   image: string;
   link: string;
   bgColor?: string;
+  bgClass?: string;
+  textClass?: string;
 }

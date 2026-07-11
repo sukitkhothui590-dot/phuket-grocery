@@ -8,6 +8,12 @@ export interface CartItem {
   productImage: string;
   selectedUnit: ProductUnit;
   quantity: number;
+  /** Where the item was added from, e.g. "ดีลพิเศษ" */
+  sourceLabel?: string;
+  /** Discount percent when added from a promo */
+  promoDiscountPercent?: number;
+  /** Saved amount per unit when added from a promo */
+  promoSavedAmount?: number;
 }
 
 interface CartState {
@@ -21,7 +27,7 @@ interface CartState {
   updateUnit: (productId: string, oldSku: string, newUnit: ProductUnit) => void;
   clearCart: () => void;
 
-  applyCoupon: (coupon: Coupon, subtotal: number) => void;
+  applyCoupon: (coupon: Coupon, subtotal: number, discountAmount?: number) => void;
   removeCoupon: () => void;
 
   getSubtotal: () => number;
@@ -48,7 +54,15 @@ export const useCartStore = create<CartState>()(
               items: state.items.map((i) =>
                 i.productId === item.productId &&
                 i.selectedUnit.sku === item.selectedUnit.sku
-                  ? { ...i, quantity: i.quantity + item.quantity }
+                  ? {
+                      ...i,
+                      quantity: i.quantity + item.quantity,
+                      sourceLabel: item.sourceLabel ?? i.sourceLabel,
+                      promoDiscountPercent:
+                        item.promoDiscountPercent ?? i.promoDiscountPercent,
+                      promoSavedAmount:
+                        item.promoSavedAmount ?? i.promoSavedAmount,
+                    }
                   : i
               ),
             };
@@ -91,9 +105,11 @@ export const useCartStore = create<CartState>()(
 
       clearCart: () => set({ items: [], coupon: null, discount: 0 }),
 
-      applyCoupon: (coupon, subtotal) => {
+      applyCoupon: (coupon, subtotal, discountAmount) => {
         let discount: number;
-        if (coupon.discountType === "fixed") {
+        if (typeof discountAmount === "number") {
+          discount = discountAmount;
+        } else if (coupon.discountType === "fixed") {
           discount = coupon.discountValue;
         } else {
           discount = (subtotal * coupon.discountValue) / 100;

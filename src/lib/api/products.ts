@@ -1,5 +1,12 @@
-import { products, categories } from "@/lib/mock-data";
-import type { Product, Category } from "@/types";
+import { apiGet } from "@/lib/api/client";
+import {
+  mapCategories,
+  mapProduct,
+  type BackendCategory,
+  type BackendProduct,
+} from "@/lib/api/mappers";
+import { enrichProductsWithRatings } from "@/lib/product-ratings";
+import type { Category, Product } from "@/types";
 
 export async function getProducts(params?: {
   categoryId?: string;
@@ -9,87 +16,152 @@ export async function getProducts(params?: {
   page?: number;
   limit?: number;
 }): Promise<{ products: Product[]; total: number }> {
-  let filtered = [...products];
+  const response = await apiGet<BackendProduct[]>("/products", {
+    searchParams: {
+      categoryId: params?.categoryId ?? params?.subcategoryId,
+      search: params?.search,
+      page: params?.page ?? 1,
+      limit: params?.limit ?? 12,
+      sort:
+        params?.sort === "price-asc"
+          ? "price_asc"
+          : params?.sort === "price-desc"
+            ? "price_desc"
+            : params?.sort === "newest"
+              ? "newest"
+              : undefined,
+    },
+  });
 
-  if (params?.categoryId) {
-    filtered = filtered.filter((p) => p.categoryId === params.categoryId);
-  }
-  if (params?.subcategoryId) {
-    filtered = filtered.filter((p) => p.subcategoryId === params.subcategoryId);
-  }
-  if (params?.search) {
-    const q = params.search.toLowerCase();
-    filtered = filtered.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q)
-    );
-  }
-
-  if (params?.sort === "price-asc") {
-    filtered.sort((a, b) => a.units[0].price - b.units[0].price);
-  } else if (params?.sort === "price-desc") {
-    filtered.sort((a, b) => b.units[0].price - a.units[0].price);
-  } else if (params?.sort === "newest") {
-    filtered.sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+  if (!response.success) {
+    return { products: [], total: 0 };
   }
 
-  const total = filtered.length;
-  const page = params?.page ?? 1;
-  const limit = params?.limit ?? 12;
-  const start = (page - 1) * limit;
-  filtered = filtered.slice(start, start + limit);
-
-  return { products: filtered, total };
+  return {
+    products: response.data.map(mapProduct),
+    total: response.meta?.total ?? response.data.length,
+  };
 }
 
 export async function getProductBySlug(
-  slug: string
+  slug: string,
 ): Promise<Product | null> {
-  return products.find((p) => p.slug === slug) ?? null;
+  const response = await apiGet<BackendProduct>(`/products/${slug}`);
+
+  if (!response.success) {
+    return null;
+  }
+
+  return mapProduct(response.data);
+}
+
+export async function getProductById(
+  id: string,
+): Promise<Product | null> {
+  const response = await apiGet<BackendProduct>(`/products/${id}`);
+
+  if (!response.success) {
+    return null;
+  }
+
+  return mapProduct(response.data);
 }
 
 export async function getFeaturedProducts(): Promise<Product[]> {
-  return products.filter((p) => p.isFeatured);
+  const response = await apiGet<BackendProduct[]>("/products", {
+    searchParams: {
+      isFeatured: "true",
+      limit: 8,
+      page: 1,
+    },
+  });
+
+  if (!response.success) {
+    return [];
+  }
+
+  return enrichProductsWithRatings(response.data.map(mapProduct));
+}
+
+export async function getPromoProducts(limit = 12): Promise<Product[]> {
+  const { products } = await getProducts({ limit: 50 });
+  const promoProducts = products
+    .filter((product) =>
+      product.units.some(
+        (unit) => unit.compareAtPrice && unit.compareAtPrice > unit.price,
+      ),
+    )
+    .slice(0, limit);
+
+  return enrichProductsWithRatings(promoProducts);
 }
 
 export async function getNewProducts(limit = 10): Promise<Product[]> {
-  return products.filter((p) => p.isNew).slice(0, limit);
+  const response = await apiGet<BackendProduct[]>("/products", {
+    searchParams: {
+      isNew: "true",
+      limit,
+      page: 1,
+      sort: "newest",
+    },
+  });
+
+  if (!response.success) {
+    return [];
+  }
+
+  return enrichProductsWithRatings(response.data.map(mapProduct));
 }
 
 export async function getBestSellerProducts(limit = 5): Promise<Product[]> {
-  return [...products]
-    .sort((a, b) => a.units[0].price - b.units[0].price)
-    .slice(0, limit);
+  const { products } = await getProducts({
+    sort: "price-asc",
+    limit,
+  });
+  return enrichProductsWithRatings(products.slice(0, limit));
 }
 
 export async function getRelatedProducts(
   productId: string,
-  categoryId: string
+  categoryId: string,
 ): Promise<Product[]> {
-  return products
-    .filter((p) => p.categoryId === categoryId && p.id !== productId)
-    .slice(0, 4);
+  const { products } = await getProducts({
+    categoryId,
+    limit: 5,
+  });
+
+  return enrichProductsWithRatings(
+    products.filter((product) => product.id !== productId).slice(0, 4),
+  );
 }
 
 export async function getProductsByCategory(
   categoryId: string,
-  limit = 5
+  limit = 5,
 ): Promise<Product[]> {
-  return products
-    .filter((p) => p.categoryId === categoryId)
-    .slice(0, limit);
+  const { products } = await getProducts({ categoryId, limit });
+  return enrichProductsWithRatings(products);
 }
 
 export async function getCategories(): Promise<Category[]> {
-  return categories;
+  const response = await apiGet<BackendCategory[]>("/categories");
+
+  if (!response.success) {
+    return [];
+  }
+
+  return mapCategories(response.data);
 }
 
 export async function getCategoryBySlug(
-  slug: string
+  slug: string,
 ): Promise<Category | null> {
-  return categories.find((c) => c.slug === slug) ?? null;
+  const response = await apiGet<BackendCategory>(`/categories/${slug}`);
+
+  if (!response.success) {
+    return null;
+  }
+
+  const categories = mapCategories([response.data]);
+  return categories[0] ?? null;
 }
