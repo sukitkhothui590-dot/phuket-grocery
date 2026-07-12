@@ -17,7 +17,7 @@ export function Header({ categories }: HeaderProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50">
+    <header className="sticky top-0 z-50 print:hidden">
       <TopBar />
       <MainHeader
         onMenuOpen={() => setMobileOpen(true)}

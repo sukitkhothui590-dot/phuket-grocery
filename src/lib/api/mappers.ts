@@ -146,6 +146,8 @@ interface BackendOrder {
   discount?: number;
   shippingCost?: number;
   shippingFee?: number;
+  codFee?: number;
+  paymentFee?: number;
   total?: number;
   couponCode?: string | null;
   paymentSlipUrl?: string | null;
@@ -390,14 +392,24 @@ export function mapOrder(order: BackendOrder): Order {
     order.subtotal ?? items.reduce((sum, item) => sum + item.subtotal, 0);
   const shipping = order.shipping;
   const shippingCost = order.shippingCost ?? order.shippingFee ?? 0;
+  const discount = order.discount ?? 0;
+  const paymentMethod = mapPaymentMethod(order.paymentMethod);
   const slipImage = order.slipImage ?? order.paymentSlipUrl ?? undefined;
+  const baseTotal = Math.max(0, subtotal - discount + shippingCost);
+  const reportedTotal = order.total ?? baseTotal;
+  const paymentFee =
+    order.codFee ??
+    order.paymentFee ??
+    (paymentMethod === "cod"
+      ? Math.max(0, Math.round((reportedTotal - baseTotal) * 100) / 100)
+      : 0);
 
   return {
     id: order.id,
     orderNumber: order.orderNumber ?? order.number ?? order.id,
     items,
     status: mapOrderStatus(order.status),
-    paymentMethod: mapPaymentMethod(order.paymentMethod),
+    paymentMethod,
     shippingMethod: mapShippingMethod(order.shippingMethod),
     slipImage,
     slipUploadedAt: order.slipUploadedAt ?? undefined,
@@ -414,10 +426,11 @@ export function mapOrder(order: BackendOrder): Order {
       isDefault: true,
     },
     couponCode: order.couponCode ?? undefined,
-    discount: order.discount ?? 0,
+    discount,
     shippingCost,
+    paymentFee,
     subtotal,
-    total: order.total ?? subtotal - (order.discount ?? 0) + shippingCost,
+    total: reportedTotal,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt ?? order.createdAt,
   };

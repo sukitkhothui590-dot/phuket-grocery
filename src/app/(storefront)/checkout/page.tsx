@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Banknote,
@@ -22,7 +22,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { AddressMapPicker } from "@/components/checkout/address-map-picker";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
 import { syncCartToServer } from "@/lib/api/cart";
@@ -82,14 +81,8 @@ export default function CheckoutPage() {
 
   const [addressDialogOpen, setAddressDialogOpen] = useState(false);
   const [newAddress, setNewAddress] = useState<Partial<Address>>({});
-  const [selectedMapPoint, setSelectedMapPoint] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-  const [mapSelectionLabel, setMapSelectionLabel] = useState("");
   const [addressLabelMode, setAddressLabelMode] = useState<AddressLabel>("บ้าน");
   const [setAsDefaultAddress, setSetAsDefaultAddress] = useState(false);
-  const lastGeocodeQueryRef = useRef("");
 
   const [geoError, setGeoError] = useState("");
   const [regionLoading, setRegionLoading] = useState(false);
@@ -178,6 +171,8 @@ export default function CheckoutPage() {
     paymentMethod === "cod" ? "เก็บเงินปลายทาง" : "โอนผ่านบัญชีธนาคาร";
   const shippingLabel =
     shippingMethod === "express" ? "ค่าจัดส่งด่วน" : "ค่าจัดส่งมาตรฐาน";
+  const amountToFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
+  const qualifiesForFreeShipping = subtotal >= freeShippingThreshold;
 
   const canSubmit =
     !!selectedAddress &&
@@ -204,17 +199,6 @@ export default function CheckoutPage() {
     .filter(Boolean)
     .join(", ");
 
-  const mapSearchQuery = [
-    newAddress.addressLine1,
-    newAddress.subDistrict,
-    newAddress.district,
-    newAddress.province,
-    newAddress.postalCode,
-    "ประเทศไทย",
-  ]
-    .filter(Boolean)
-    .join(", ");
-
   const handleSlipUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -222,63 +206,6 @@ export default function CheckoutPage() {
       setSlipPreview(URL.createObjectURL(file));
     }
   };
-
-  useEffect(() => {
-    if (!addressDialogOpen) {
-      return;
-    }
-
-    const hasEnoughAddress =
-      !!newAddress.province &&
-      !!newAddress.district &&
-      !!newAddress.subDistrict &&
-      !!newAddress.addressLine1;
-
-    if (!hasEnoughAddress) {
-      return;
-    }
-
-    const query = mapSearchQuery.trim();
-    if (!query || lastGeocodeQueryRef.current === query) {
-      return;
-    }
-
-    const timeoutId = window.setTimeout(async () => {
-      try {
-        const response = await fetch(
-          `/api/geocode?q=${encodeURIComponent(query)}`
-        );
-
-        if (!response.ok) {
-          return;
-        }
-
-        const payload = (await response.json()) as {
-          lat: number;
-          lon: number;
-          displayName?: string;
-        };
-
-        lastGeocodeQueryRef.current = query;
-        setSelectedMapPoint({
-          lat: payload.lat,
-          lng: payload.lon,
-        });
-        setMapSelectionLabel(payload.displayName || query);
-      } catch {
-        // Ignore geocode sync failures and keep manual map selection available.
-      }
-    }, 500);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [
-    addressDialogOpen,
-    mapSearchQuery,
-    newAddress.addressLine1,
-    newAddress.district,
-    newAddress.province,
-    newAddress.subDistrict,
-  ]);
 
   const openRegionPicker = () => {
     if (!newAddress.province) {
@@ -430,9 +357,6 @@ export default function CheckoutPage() {
     setSelectedAddress(address);
     setAddressDialogOpen(false);
     setNewAddress({});
-    setSelectedMapPoint(null);
-    setMapSelectionLabel("");
-    lastGeocodeQueryRef.current = "";
     setRegionPickerOpen(false);
     setRegionStep("province");
     setDistrictOptions([]);
@@ -619,9 +543,6 @@ export default function CheckoutPage() {
             setAddressDialogOpen(open);
             if (!open) {
               setNewAddress({});
-              setSelectedMapPoint(null);
-              setMapSelectionLabel("");
-              lastGeocodeQueryRef.current = "";
               setRegionPickerOpen(false);
               setRegionStep("province");
               setGeoError("");
@@ -789,73 +710,6 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <AddressMapPicker
-                    value={selectedMapPoint}
-                    selectedLabel={mapSelectionLabel}
-                    onChange={async (selection) => {
-                      const nextProvince = selection.province || "";
-                      const nextDistrict = selection.district || "";
-                      const nextSubDistrict = selection.subDistrict || "";
-                      const nextPostalCode = selection.postalCode || "";
-
-                      setSelectedMapPoint({
-                        lat: selection.lat,
-                        lng: selection.lon,
-                      });
-                      setMapSelectionLabel(
-                        selection.displayName ||
-                          selection.addressLine1 ||
-                          regionSummary
-                      );
-
-                      setNewAddress((current) => ({
-                        ...current,
-                        province: nextProvince || current.province,
-                        district: nextDistrict || current.district,
-                        subDistrict: nextSubDistrict || current.subDistrict,
-                        postalCode: nextPostalCode || current.postalCode,
-                        addressLine1:
-                          current.addressLine1 ||
-                          selection.addressLine1 ||
-                          current.addressLine1,
-                        addressLine2:
-                          selection.displayName || current.addressLine2,
-                      }));
-
-                      if (nextProvince) {
-                        const districtItems = await fetchRegionOptions("districts", {
-                          province: nextProvince,
-                        });
-                        setDistrictOptions(districtItems);
-                      }
-
-                      if (nextProvince && nextDistrict) {
-                        const subdistrictItems = await fetchRegionOptions(
-                          "subdistricts",
-                          {
-                            province: nextProvince,
-                            district: nextDistrict,
-                          }
-                        );
-                        setSubdistrictOptions(subdistrictItems);
-                      }
-
-                      if (nextProvince && nextDistrict && nextSubDistrict) {
-                        const postalItems = await fetchRegionOptions(
-                          "postalcodes",
-                          {
-                            province: nextProvince,
-                            district: nextDistrict,
-                            subdistrict: nextSubDistrict,
-                          }
-                        );
-                        setPostalOptions(postalItems);
-                      }
-                    }}
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
                   <p className="mb-3 text-sm text-foreground">ติดป้ายเป็น:</p>
                   <div className="flex gap-3">
                     {(["บ้าน", "ที่ทำงาน"] as const).map((label) => (
@@ -1005,13 +859,17 @@ export default function CheckoutPage() {
                             ? "Express Delivery - จัดส่งด่วนในวันถัดไป"
                             : "Standard Delivery - ส่งธรรมดาทั่วประเทศ"}
                         </p>
-                        {shippingCost === 0 ? (
+                        {qualifiesForFreeShipping ? (
                           <p className="mt-1 text-xs text-green-600">
-                            รับส่วนลดค่าส่ง เมื่อยอดสั่งซื้อถึงขั้นต่ำ
+                            ส่งฟรี เพราะยอดสั่งซื้อครบ ฿
+                            {freeShippingThreshold.toLocaleString()}
                           </p>
                         ) : (
-                          <p className="mt-1 text-xs text-slate-400">
-                            ค่าจัดส่งจะคิดตามวิธีส่งที่เลือก
+                          <p className="mt-1 text-xs text-slate-500">
+                            สั่งเพิ่มอีก ฿
+                            {amountToFreeShipping.toLocaleString()} จะได้ส่งฟรี
+                            (ขั้นต่ำ ฿
+                            {freeShippingThreshold.toLocaleString()})
                           </p>
                         )}
                       </div>
@@ -1029,7 +887,9 @@ export default function CheckoutPage() {
                           เปลี่ยน
                         </button>
                         <p className="mt-3 text-sm text-foreground">
-                          ฿{shippingCost.toLocaleString()}
+                          {shippingCost === 0
+                            ? "ฟรี"
+                            : `฿${shippingCost.toLocaleString()}`}
                         </p>
                       </div>
                     </div>
@@ -1166,6 +1026,16 @@ export default function CheckoutPage() {
                     : `฿${shippingCost.toLocaleString()}`}
                 </span>
               </div>
+              {qualifiesForFreeShipping ? (
+                <p className="-mt-2 text-right text-xs text-green-600">
+                  ส่งฟรีเมื่อยอดครบ ฿{freeShippingThreshold.toLocaleString()}
+                </p>
+              ) : (
+                <p className="-mt-2 text-right text-xs text-slate-500">
+                  สั่งครบ ฿{freeShippingThreshold.toLocaleString()} ส่งฟรี
+                  (อีก ฿{amountToFreeShipping.toLocaleString()})
+                </p>
+              )}
               {paymentFee > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-slate-600">ค่าธรรมเนียม COD</span>

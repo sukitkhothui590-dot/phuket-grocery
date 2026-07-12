@@ -20,7 +20,11 @@ import { CookieConsentFab } from "./cookie-consent-fab";
 
 export function Footer() {
   const pathname = usePathname();
-  const hideFooter = pathname === "/cart" || pathname === "/checkout";
+  const hideFooter =
+    pathname === "/cart" ||
+    pathname === "/checkout" ||
+    pathname.startsWith("/checkout/success") ||
+    pathname.includes("/receipt");
   const [store, setStore] = useState<{
     name: string;
     address: string;
@@ -60,7 +64,7 @@ export function Footer() {
   return (
     <>
       {!hideFooter && (
-        <footer className="bg-primary text-primary-foreground">
+        <footer className="bg-primary text-primary-foreground print:hidden">
           <div className="mx-auto max-w-7xl px-4 py-10">
             <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
               <div>

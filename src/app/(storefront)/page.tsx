@@ -1,6 +1,5 @@
 import { HeroBanner } from "@/components/home/hero-banner";
 import { HomePromoCarousel } from "@/components/home/home-promo-carousel";
-import { HomeCouponCategories } from "@/components/home/home-coupon-categories";
 import { PromotionGrid } from "@/components/home/promotion-grid";
 import { FeaturedProducts } from "@/components/home/featured-products";
 import { CategoryProductSection } from "@/components/home/category-product-section";
@@ -35,7 +34,6 @@ export default async function HomePage() {
     <>
       <HeroBanner banners={banners} />
       <HomePromoCarousel products={promoProducts} />
-      <HomeCouponCategories />
       <PromotionGrid />
       <FeaturedProducts title="สินค้าแนะนำ" products={featuredProducts} />
 

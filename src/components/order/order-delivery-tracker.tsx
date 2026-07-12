@@ -1,11 +1,16 @@
 "use client";
 
 import { Clock3, MapPin, Phone, Truck } from "lucide-react";
+import { COMPANY_INFO } from "@/lib/constants";
 import type { Order } from "@/types";
 
 type DeliveryTrackerProps = {
   order: Order;
 };
+
+function toTelHref(phone: string) {
+  return `tel:${phone.replace(/[^\d+]/g, "")}`;
+}
 
 function formatAddress(order: Order) {
   return [
@@ -64,6 +69,7 @@ export function OrderDeliveryTracker({ order }: DeliveryTrackerProps) {
   const etaRange = getEtaRange(order);
   const etaClock = formatEtaClock(order);
   const statusLabel = getStatusLabel(order);
+  const storePhone = COMPANY_INFO.phone;
 
   return (
     <section className="rounded-2xl border bg-white">
@@ -78,13 +84,13 @@ export function OrderDeliveryTracker({ order }: DeliveryTrackerProps) {
           <span className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
             {statusLabel}
           </span>
-          <button
-            type="button"
+          <a
+            href={toTelHref(storePhone)}
             className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-primary/40 hover:text-primary"
           >
             <Phone className="h-4 w-4" />
             ติดต่อร้านค้า
-          </button>
+          </a>
         </div>
       </div>
 

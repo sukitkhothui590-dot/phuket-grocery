@@ -3,7 +3,8 @@ import type { ClaimableCoupon, CouponCategory } from "@/types";
 /**
  * Claimable voucher catalog aligned with live backend coupon codes.
  * Until backend exposes GET /coupons/available + claim APIs,
- * the storefront uses this list for the "เก็บคูปอง" experience.
+ * Fallback / display helpers for coupon categories.
+ * Live coupons come from GET /coupons/available.
  */
 export const CLAIMABLE_COUPON_CATALOG: ClaimableCoupon[] = [
   {
@@ -163,13 +164,14 @@ export const COUPON_CATEGORIES: Array<{
     id: "shipping",
     title: "โค้ดส่งฟรี",
     subtitle: "ลด / ช่วยค่าจัดส่ง",
-    description: "คูปองช่วยค่าส่ง ใช้ตอนชำระเงินเมื่อยอดถึงขั้นต่ำ",
+    description:
+      "คูปองช่วยค่าส่งจากร้าน ใช้ตอนชำระเงินเมื่อยอดถึงขั้นต่ำของโค้ด (ต่างจากส่งฟรีอัตโนมัติเมื่อครบ ฿1,500)",
   },
   {
     id: "order_discount",
     title: "โค้ดลดทุกการสั่งซื้อ",
     subtitle: "ส่วนลดท้ายบิล",
-    description: "คูปองลดราคาสินค้า ใช้ได้กับคำสั่งซื้อในร้าน",
+    description: "คูปองลดราคาสินค้า แสดงให้อัตโนมัติเมื่อร้านเพิ่มโค้ดใหม่",
   },
 ];
 

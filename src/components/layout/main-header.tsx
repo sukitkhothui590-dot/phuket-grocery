@@ -140,11 +140,8 @@ export function MainHeader({
                   <DropdownMenuItem onClick={() => router.push("/account")}>
                     บัญชีของฉัน
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => router.push("/account/coupons")}>
-                    คูปองของฉัน
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push("/coupons")}>
-                    เก็บคูปอง
+                    คูปองส่วนลด
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push("/account/orders")}>
                     ประวัติการสั่งซื้อ

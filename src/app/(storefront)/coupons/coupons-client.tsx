@@ -5,11 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TicketPercent } from "lucide-react";
 import { CouponVoucherCard } from "@/components/coupon/coupon-voucher-card";
-import { useAuthStore } from "@/stores/auth-store";
-import {
-  claimCoupon,
-  getAvailableCoupons,
-} from "@/lib/api/coupons";
+import { getAvailableCoupons } from "@/lib/api/coupons";
 import { COUPON_CATEGORIES } from "@/lib/coupons/catalog";
 import type { ClaimableCoupon, CouponCategory } from "@/types";
 
@@ -23,54 +19,23 @@ export default function CouponsPageClient() {
   const typeParam = searchParams.get("type");
   const activeType = isCouponCategory(typeParam) ? typeParam : undefined;
 
-  const { accessToken, isAuthenticated } = useAuthStore();
   const [coupons, setCoupons] = useState<ClaimableCoupon[]>([]);
   const [loading, setLoading] = useState(true);
-  const [claimingId, setClaimingId] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const activeCategory = COUPON_CATEGORIES.find((c) => c.id === activeType);
 
   const loadCoupons = useCallback(async () => {
     setLoading(true);
-    setError(null);
     const result = await getAvailableCoupons({
       category: activeType,
-      token: accessToken,
     });
     setCoupons(result.coupons);
     setLoading(false);
-  }, [accessToken, activeType]);
+  }, [activeType]);
 
   useEffect(() => {
     void loadCoupons();
   }, [loadCoupons]);
-
-  const handleClaim = async (coupon: ClaimableCoupon) => {
-    setMessage(null);
-    setError(null);
-
-    if (!isAuthenticated || !accessToken) {
-      const next = activeType
-        ? `/login?next=${encodeURIComponent(`/coupons?type=${activeType}`)}`
-        : "/login?next=/coupons";
-      router.push(next);
-      return;
-    }
-
-    setClaimingId(coupon.id);
-    const result = await claimCoupon(coupon.id, accessToken);
-    setClaimingId(null);
-
-    if (!result.success) {
-      setError(result.error ?? "เก็บคูปองไม่สำเร็จ");
-      return;
-    }
-
-    setMessage(`เก็บคูปอง ${coupon.code} แล้ว`);
-    await loadCoupons();
-  };
 
   const filters: Array<{ id?: CouponCategory; label: string; href: string }> = [
     { label: "ทั้งหมด", href: "/coupons" },
@@ -90,20 +55,20 @@ export default function CouponsPageClient() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-foreground">
-              {activeCategory?.title ?? "เก็บคูปองส่วนลด"}
+              {activeCategory?.title ?? "คูปองส่วนลด"}
             </h1>
             <p className="text-xs text-muted-foreground">
               {activeCategory?.description ??
-                "เลือกคูปองที่ต้องการ ดูเงื่อนไขแล้วกดเก็บไว้ใช้ตอนชำระเงิน"}
+                "คูปองจากร้านจะแสดงให้อัตโนมัติ เลือกใช้ได้ทันทีตอนชำระเงิน"}
             </p>
           </div>
         </div>
 
         <Link
-          href="/account/coupons"
+          href="/cart"
           className="self-start text-sm font-medium text-primary hover:underline sm:self-auto"
         >
-          คูปองของฉัน →
+          ไปใช้ในตะกร้า →
         </Link>
       </div>
 
@@ -126,20 +91,6 @@ export default function CouponsPageClient() {
         })}
       </div>
 
-      {message && (
-        <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
-          {message}{" "}
-          <Link href="/account/coupons" className="font-semibold underline">
-            เปิดดู
-          </Link>
-        </div>
-      )}
-      {error && (
-        <div className="mb-4 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-          {error}
-        </div>
-      )}
-
       {loading ? (
         <div className="rounded-lg border border-dashed bg-slate-50 px-6 py-14 text-center text-sm text-muted-foreground">
           กำลังโหลดคูปอง...
@@ -150,23 +101,15 @@ export default function CouponsPageClient() {
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {coupons.map((coupon) => {
-            const claimed =
-              coupon.claimedByMe || (coupon.remainingClaims ?? 1) <= 0;
-            return (
-              <CouponVoucherCard
-                key={coupon.id}
-                coupon={coupon}
-                claimed={claimed}
-                disabled={claimingId !== null}
-                detailed
-                actionLabel={
-                  claimingId === coupon.id ? "กำลังเก็บ..." : "เก็บคูปอง"
-                }
-                onAction={() => void handleClaim(coupon)}
-              />
-            );
-          })}
+          {coupons.map((coupon) => (
+            <CouponVoucherCard
+              key={coupon.id}
+              coupon={coupon}
+              detailed
+              actionLabel="ใช้ที่ตะกร้า"
+              onAction={() => router.push("/cart")}
+            />
+          ))}
         </div>
       )}
     </main>

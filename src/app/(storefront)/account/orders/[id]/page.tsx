@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Check,
   CreditCard,
+  FileText,
   MapPin,
   Package,
   ShoppingBag,
@@ -19,6 +20,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { cancelOrder, getOrderById, uploadOrderSlip } from "@/lib/api/orders";
 import { uploadFile } from "@/lib/api/upload";
 import { getStoreSettings } from "@/lib/api/settings";
+import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import { ORDER_STATUS_CONFIG, ORDER_STATUS_FLOW } from "@/lib/order-status";
 import type { Order } from "@/types";
 import { Input } from "@/components/ui/input";
@@ -216,11 +218,19 @@ export default function OrderDetailPage() {
                 </p>
               </div>
 
-              <span
-                className={`inline-flex w-fit rounded-full px-4 py-2 text-sm font-medium ${status.colorClass}`}
-              >
-                {status.label}
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={`inline-flex w-fit rounded-full px-4 py-2 text-sm font-medium ${status.colorClass}`}
+                >
+                  {status.label}
+                </span>
+                <Link href={`/account/orders/${order.id}/receipt`}>
+                  <Button variant="outline" className="gap-2 rounded-full">
+                    <FileText className="h-4 w-4" />
+                    ใบเสร็จรับเงิน
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -455,6 +465,18 @@ export default function OrderDetailPage() {
                         : `฿${order.shippingCost.toLocaleString()}`}
                     </span>
                   </div>
+                  {order.shippingCost === 0 && (
+                    <p className="-mt-1 text-right text-xs text-green-600">
+                      ส่งฟรีเมื่อยอดครบ ฿
+                      {FREE_SHIPPING_THRESHOLD.toLocaleString()}
+                    </p>
+                  )}
+                  {(order.paymentFee ?? 0) > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">ค่าธรรมเนียม COD</span>
+                      <span>฿{(order.paymentFee ?? 0).toLocaleString()}</span>
+                    </div>
+                  )}
                   {order.discount > 0 && (
                     <div className="flex items-center justify-between text-emerald-600">
                       <span>

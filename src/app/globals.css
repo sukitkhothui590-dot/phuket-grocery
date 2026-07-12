@@ -211,3 +211,74 @@
     animation: pg-flame 1.6s ease-in-out infinite;
   }
 }
+
+@media print {
+  @page {
+    margin: 8mm;
+    size: A4;
+  }
+
+  html,
+  body {
+    height: 100%;
+    background: #fff !important;
+    color: #111 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .print\:hidden,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  main {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print-receipt {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-height: 281mm !important;
+    height: 281mm !important;
+    max-width: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border-color: #111 !important;
+    border-radius: 0 !important;
+    overflow: hidden;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .print-receipt header,
+  .print-receipt footer {
+    display: block !important;
+    flex-shrink: 0 !important;
+  }
+
+  .print-receipt .receipt-items {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  .print-receipt .receipt-items-spacer {
+    flex: 1 1 auto !important;
+    min-height: 40mm !important;
+  }
+
+  .print-receipt thead {
+    background: #f5f5f5 !important;
+  }
+
+  a[href]::after {
+    content: none !important;
+  }
+}

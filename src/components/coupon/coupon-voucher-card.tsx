@@ -111,7 +111,7 @@ export function CouponVoucherCard({
                 : "bg-primary text-white hover:bg-primary/90 disabled:opacity-50",
             )}
           >
-            {claimed ? "เก็บแล้ว" : actionLabel ?? "เก็บ"}
+            {claimed ? "ใช้แล้ว" : actionLabel ?? "ใช้คูปอง"}
           </button>
         )}
       </div>

@@ -14,7 +14,7 @@ import {
 } from "@/lib/cart-actions";
 import { validateCoupon } from "@/lib/api/orders";
 import { getProductById } from "@/lib/api/products";
-import { COMPANY_INFO } from "@/lib/constants";
+import { COMPANY_INFO, FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import { getPlaceholderUrl } from "@/lib/placeholder";
 import type { Product, ProductUnit } from "@/types";
 
@@ -97,6 +97,8 @@ export default function CartPage() {
   );
   const appliedDiscount = coupon ? Math.min(discount, subtotal) : 0;
   const total = Math.max(0, subtotal - appliedDiscount);
+  const amountToFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - subtotal);
+  const qualifiesForFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD;
 
   const toggleItemSelection = (productId: string, sku: string) => {
     const key = getSelectionKey(productId, sku);
@@ -470,7 +472,7 @@ export default function CartPage() {
                       href="/coupons"
                       className="text-xs font-medium text-primary hover:underline"
                     >
-                      เก็บคูปอง
+                      ดูคูปอง
                     </Link>
                   </div>
                 )}
@@ -526,6 +528,17 @@ export default function CartPage() {
               </p>
               <p className="text-2xl font-bold text-destructive">
                 ฿{total.toLocaleString()}
+              </p>
+              <p
+                className={
+                  qualifiesForFreeShipping
+                    ? "mt-1 text-xs text-green-600"
+                    : "mt-1 text-xs text-slate-500"
+                }
+              >
+                {qualifiesForFreeShipping
+                  ? `ส่งฟรี (ยอดครบ ฿${FREE_SHIPPING_THRESHOLD.toLocaleString()})`
+                  : `สั่งครบ ฿${FREE_SHIPPING_THRESHOLD.toLocaleString()} ส่งฟรี · อีก ฿${amountToFreeShipping.toLocaleString()}`}
               </p>
             </div>
 

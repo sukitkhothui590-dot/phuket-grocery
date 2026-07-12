@@ -144,8 +144,8 @@ export default function AccountPage() {
               <div className="grid gap-3 px-6 py-6 sm:grid-cols-2 lg:grid-cols-4">
                 {[
                   {
-                    label: "คูปองของฉัน",
-                    href: "/account/coupons",
+                    label: "คูปองส่วนลด",
+                    href: "/coupons",
                     icon: Ticket,
                   },
                   {

@@ -6,10 +6,9 @@ import { Ticket, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CouponVoucherCard } from "@/components/coupon/coupon-voucher-card";
-import { useAuthStore } from "@/stores/auth-store";
-import { getMyCoupons } from "@/lib/api/coupons";
+import { getAvailableCoupons } from "@/lib/api/coupons";
 import { formatCouponBenefit } from "@/lib/coupons/catalog";
-import type { SavedCoupon } from "@/types";
+import type { ClaimableCoupon } from "@/types";
 
 interface CouponPickerProps {
   open: boolean;
@@ -28,11 +27,9 @@ export function CouponPicker({
   error,
   appliedCode,
 }: CouponPickerProps) {
-  const accessToken = useAuthStore((state) => state.accessToken);
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [manualCode, setManualCode] = useState("");
   const [selectedCode, setSelectedCode] = useState(appliedCode ?? "");
-  const [saved, setSaved] = useState<SavedCoupon[]>([]);
+  const [available, setAvailable] = useState<ClaimableCoupon[]>([]);
   const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
@@ -40,26 +37,19 @@ export function CouponPicker({
     setSelectedCode(appliedCode ?? "");
     setManualCode("");
 
-    if (!isAuthenticated || !accessToken) {
-      setSaved([]);
-      return;
-    }
-
     let cancelled = false;
     setFetching(true);
-    void getMyCoupons({ token: accessToken, status: "AVAILABLE" }).then(
-      (result) => {
-        if (!cancelled) {
-          setSaved(result.coupons);
-          setFetching(false);
-        }
-      },
-    );
+    void getAvailableCoupons().then((result) => {
+      if (!cancelled) {
+        setAvailable(result.coupons);
+        setFetching(false);
+      }
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [accessToken, appliedCode, isAuthenticated, open]);
+  }, [appliedCode, open]);
 
   if (!open) return null;
 
@@ -88,40 +78,28 @@ export function CouponPicker({
         </div>
 
         <div className="space-y-4 overflow-y-auto px-4 py-4">
-          {!isAuthenticated ? (
-            <div className="rounded-xl border border-dashed bg-slate-50 px-4 py-6 text-center">
-              <p className="text-sm text-muted-foreground">
-                เข้าสู่ระบบเพื่อใช้คูปองที่เก็บไว้
-              </p>
-              <Link
-                href="/login?next=/cart"
-                className="mt-3 inline-flex text-sm font-semibold text-primary hover:underline"
-              >
-                เข้าสู่ระบบ
-              </Link>
-            </div>
-          ) : fetching ? (
+          {fetching ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
               กำลังโหลดคูปอง...
             </p>
-          ) : saved.length === 0 ? (
+          ) : available.length === 0 ? (
             <div className="rounded-xl border border-dashed bg-slate-50 px-4 py-6 text-center">
               <p className="text-sm text-muted-foreground">
-                ยังไม่มีคูปองในกระเป๋า
+                ยังไม่มีคูปองพร้อมใช้ตอนนี้
               </p>
               <Link
                 href="/coupons"
                 className="mt-3 inline-flex text-sm font-semibold text-primary hover:underline"
               >
-                ไปเก็บคูปอง
+                ดูคูปองทั้งหมด
               </Link>
             </div>
           ) : (
             <div className="space-y-3">
               <p className="text-xs font-medium text-muted-foreground">
-                คูปองของฉัน ({saved.length})
+                คูปองพร้อมใช้ ({available.length})
               </p>
-              {saved.map((coupon) => (
+              {available.map((coupon) => (
                 <CouponVoucherCard
                   key={coupon.id}
                   coupon={coupon}

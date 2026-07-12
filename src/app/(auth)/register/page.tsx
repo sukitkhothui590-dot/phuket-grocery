@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ThaiRegionPicker } from "@/components/address/thai-region-picker";
-import { AddressMapPicker } from "@/components/checkout/address-map-picker";
 import { SITE_NAME } from "@/lib/constants";
 import { UserPlus } from "lucide-react";
 
@@ -60,11 +59,6 @@ export default function RegisterPage() {
   const [regionError, setRegionError] = useState("");
   const [addressLabelMode, setAddressLabelMode] =
     useState<AddressLabel>("บ้าน");
-  const [selectedMapPoint, setSelectedMapPoint] = useState<{
-    lat: number;
-    lng: number;
-  } | null>(null);
-  const [mapSelectionLabel, setMapSelectionLabel] = useState("");
 
   const {
     register,
@@ -94,15 +88,10 @@ export default function RegisterPage() {
   const phone = watch("phone");
   const addressFullName = watch("address.fullName");
   const addressPhone = watch("address.phone");
-  const addressLine1 = watch("address.addressLine1");
   const province = watch("address.province");
   const district = watch("address.district");
   const subDistrict = watch("address.subDistrict");
   const postalCode = watch("address.postalCode");
-
-  const regionSummary = [province, district, subDistrict, postalCode]
-    .filter(Boolean)
-    .join(", ");
 
   useEffect(() => {
     const fullName = `${firstName || ""} ${lastName || ""}`.trim();
@@ -345,59 +334,6 @@ export default function RegisterPage() {
                     {errors.address.addressLine1.message}
                   </p>
                 )}
-              </div>
-
-              <div className="sm:col-span-2">
-                <AddressMapPicker
-                  value={selectedMapPoint}
-                  selectedLabel={mapSelectionLabel}
-                  onChange={(selection) => {
-                    const nextProvince = selection.province || "";
-                    const nextDistrict = selection.district || "";
-                    const nextSubDistrict = selection.subDistrict || "";
-                    const nextPostalCode = selection.postalCode || "";
-
-                    setSelectedMapPoint({
-                      lat: selection.lat,
-                      lng: selection.lon,
-                    });
-                    setMapSelectionLabel(
-                      selection.displayName ||
-                        selection.addressLine1 ||
-                        regionSummary,
-                    );
-
-                    if (nextProvince) {
-                      setValue("address.province", nextProvince, {
-                        shouldValidate: true,
-                      });
-                    }
-                    if (nextDistrict) {
-                      setValue("address.district", nextDistrict, {
-                        shouldValidate: true,
-                      });
-                    }
-                    if (nextSubDistrict) {
-                      setValue("address.subDistrict", nextSubDistrict, {
-                        shouldValidate: true,
-                      });
-                    }
-                    if (nextPostalCode) {
-                      setValue("address.postalCode", nextPostalCode, {
-                        shouldValidate: true,
-                      });
-                    }
-                    if (!addressLine1 && selection.addressLine1) {
-                      setValue("address.addressLine1", selection.addressLine1, {
-                        shouldValidate: true,
-                      });
-                    }
-                    if (selection.displayName) {
-                      setValue("address.addressLine2", selection.displayName);
-                    }
-                    setRegionError("");
-                  }}
-                />
               </div>
 
               <div className="sm:col-span-2">

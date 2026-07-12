@@ -35,6 +35,8 @@ export interface Order {
   couponCode?: string;
   discount: number;
   shippingCost: number;
+  /** COD / payment handling fee included in total */
+  paymentFee?: number;
   subtotal: number;
   total: number;
   createdAt: string;
