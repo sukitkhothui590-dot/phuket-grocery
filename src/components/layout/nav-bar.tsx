@@ -67,6 +67,7 @@ export function NavBar({ categories }: { categories: Category[] }) {
 
   const isProductsActive =
     pathname.startsWith("/categories") || pathname.startsWith("/products");
+  const isPromotionsActive = pathname.startsWith("/campaigns");
   const isSellActive = pathname === SELL_WITH_US_HREF;
 
   return (
@@ -138,6 +139,7 @@ export function NavBar({ categories }: { categories: Category[] }) {
               <NavTrigger
                 label="โปรโมชั่น"
                 isOpen={openMenu === "promotions"}
+                isActive={isPromotionsActive}
               />
             </Link>
 

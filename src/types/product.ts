@@ -5,11 +5,25 @@ export interface ProductUnit {
   unitType: UnitType;
   labelTh: string;
   labelEn: string;
+  /** Effective price after the backend applies the winning campaign. */
   price: number;
+  /** Original catalog price before campaign pricing. */
+  basePrice?: number;
+  /** Reference price supplied by the backend for strike-through display. */
+  listPrice?: number;
   compareAtPrice?: number;
+  salePriceOverride?: number;
+  dealId?: string;
   conversionRate: number;
   sku: string;
   stock: number;
+}
+
+export interface ActiveDeal {
+  id: string;
+  slug: string;
+  title: string;
+  badge?: string;
 }
 
 export interface Product {
@@ -27,6 +41,7 @@ export interface Product {
   isNew?: boolean;
   averageRating?: number;
   reviewCount?: number;
+  activeDeal?: ActiveDeal | null;
   createdAt: string;
 }
 

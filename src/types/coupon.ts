@@ -33,6 +33,13 @@ export interface ClaimableCoupon extends Coupon {
   sortOrder?: number;
 }
 
+export interface CartCoupon extends ClaimableCoupon {
+  applicable: boolean;
+  discountPreview: number;
+  reason?: string;
+  message?: string;
+}
+
 /** Coupon already saved in the user's wallet */
 export interface SavedCoupon extends ClaimableCoupon {
   couponId?: string;

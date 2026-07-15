@@ -6,9 +6,9 @@ import { Ticket, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CouponVoucherCard } from "@/components/coupon/coupon-voucher-card";
-import { getAvailableCoupons } from "@/lib/api/coupons";
+import { getCouponsForCart } from "@/lib/api/coupons";
 import { formatCouponBenefit } from "@/lib/coupons/catalog";
-import type { ClaimableCoupon } from "@/types";
+import type { CartCoupon } from "@/types";
 
 interface CouponPickerProps {
   open: boolean;
@@ -17,6 +17,8 @@ interface CouponPickerProps {
   loading?: boolean;
   error?: string;
   appliedCode?: string;
+  token?: string | null;
+  cartItems: Array<{ productId: string; unitId: string; quantity: number }>;
 }
 
 export function CouponPicker({
@@ -26,20 +28,19 @@ export function CouponPicker({
   loading = false,
   error,
   appliedCode,
+  token,
+  cartItems,
 }: CouponPickerProps) {
   const [manualCode, setManualCode] = useState("");
   const [selectedCode, setSelectedCode] = useState(appliedCode ?? "");
-  const [available, setAvailable] = useState<ClaimableCoupon[]>([]);
-  const [fetching, setFetching] = useState(false);
+  const [available, setAvailable] = useState<CartCoupon[]>([]);
+  const [fetching, setFetching] = useState(true);
 
   useEffect(() => {
     if (!open) return;
-    setSelectedCode(appliedCode ?? "");
-    setManualCode("");
 
     let cancelled = false;
-    setFetching(true);
-    void getAvailableCoupons().then((result) => {
+    void getCouponsForCart(cartItems, token).then((result) => {
       if (!cancelled) {
         setAvailable(result.coupons);
         setFetching(false);
@@ -49,7 +50,7 @@ export function CouponPicker({
     return () => {
       cancelled = true;
     };
-  }, [appliedCode, open]);
+  }, [appliedCode, cartItems, open, token]);
 
   if (!open) return null;
 
@@ -97,7 +98,7 @@ export function CouponPicker({
           ) : (
             <div className="space-y-3">
               <p className="text-xs font-medium text-muted-foreground">
-                คูปองพร้อมใช้ ({available.length})
+                คูปองสำหรับตะกร้านี้ ({available.length})
               </p>
               {available.map((coupon) => (
                 <CouponVoucherCard
@@ -106,11 +107,18 @@ export function CouponPicker({
                   selected={
                     selectedCode.toUpperCase() === coupon.code.toUpperCase()
                   }
+                  disabled={!coupon.applicable}
                   onSelect={() => {
                     setSelectedCode(coupon.code);
                     setManualCode("");
                   }}
-                  secondaryLabel={formatCouponBenefit(coupon)}
+                  secondaryLabel={
+                    coupon.applicable
+                      ? coupon.discountPreview > 0
+                        ? `ลดได้ ฿${coupon.discountPreview.toLocaleString()}`
+                        : formatCouponBenefit(coupon)
+                      : coupon.message ?? formatCouponBenefit(coupon)
+                  }
                 />
               ))}
             </div>

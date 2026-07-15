@@ -773,7 +773,9 @@ export default function CheckoutPage() {
 
           {groupedItems.map((group, groupIndex) => {
             const groupSubtotal = group.items.reduce(
-              (sum, item) => sum + item.selectedUnit.price * item.quantity,
+              (sum, item) =>
+                sum +
+                (item.lineTotal ?? item.selectedUnit.price * item.quantity),
               0
             );
 
@@ -789,7 +791,8 @@ export default function CheckoutPage() {
                 </div>
 
                 {group.items.map((item) => {
-                  const itemSubtotal = item.selectedUnit.price * item.quantity;
+                  const itemSubtotal =
+                    item.lineTotal ?? item.selectedUnit.price * item.quantity;
 
                   return (
                     <div
@@ -808,6 +811,11 @@ export default function CheckoutPage() {
                           <p className="line-clamp-2 text-sm leading-6 text-foreground">
                             {item.productName}
                           </p>
+                          {item.dealBadge && (
+                            <span className="mt-1.5 inline-flex rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
+                              {item.dealBadge}
+                            </span>
+                          )}
                           <p className="mt-2 text-sm text-slate-400">
                             ตัวเลือกสินค้า: {item.selectedUnit.labelTh}
                           </p>
@@ -818,6 +826,14 @@ export default function CheckoutPage() {
                         <p className="text-foreground">
                           ฿{item.selectedUnit.price.toLocaleString()}
                         </p>
+                        {item.selectedUnit.compareAtPrice &&
+                          item.selectedUnit.compareAtPrice >
+                            item.selectedUnit.price && (
+                            <p className="text-xs text-slate-400 line-through">
+                              ฿
+                              {item.selectedUnit.compareAtPrice.toLocaleString()}
+                            </p>
+                          )}
                       </div>
 
                       <div className="text-sm lg:text-center">{item.quantity}</div>

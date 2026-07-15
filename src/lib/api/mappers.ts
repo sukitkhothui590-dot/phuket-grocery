@@ -39,7 +39,11 @@ interface BackendProductUnit {
   conversionToBase: number;
   conversionRate?: number;
   price: number;
+  basePrice?: number | null;
+  listPrice?: number | null;
   compareAtPrice?: number | null;
+  salePriceOverride?: number | null;
+  dealId?: string | null;
   isBaseUnit: boolean;
   isActive: boolean;
   stock?: number;
@@ -63,6 +67,12 @@ interface BackendProduct {
   createdAt: string;
   updatedAt?: string;
   category?: { id: string; name: string; slug: string };
+  activeDeal?: {
+    id: string;
+    slug: string;
+    title: string;
+    badge?: string | null;
+  } | null;
   units: BackendProductUnit[];
   stock?: {
     balance: number;
@@ -193,13 +203,26 @@ function mapUnitType(unit: BackendProductUnit): UnitType {
 }
 
 export function mapProductUnit(unit: BackendProductUnit): ProductUnit {
+  const referencePrice =
+    unit.compareAtPrice && unit.compareAtPrice > unit.price
+      ? unit.compareAtPrice
+      : unit.listPrice && unit.listPrice > unit.price
+        ? unit.listPrice
+        : unit.basePrice && unit.basePrice > unit.price
+          ? unit.basePrice
+          : undefined;
+
   return {
     id: unit.id,
     unitType: mapUnitType(unit),
     labelTh: unit.labelTh ?? unit.unitName,
     labelEn: unit.labelEn ?? unit.unitName,
     price: unit.price,
-    compareAtPrice: unit.compareAtPrice ?? undefined,
+    basePrice: unit.basePrice ?? undefined,
+    listPrice: unit.listPrice ?? undefined,
+    compareAtPrice: referencePrice,
+    salePriceOverride: unit.salePriceOverride ?? undefined,
+    dealId: unit.dealId ?? undefined,
     conversionRate: unit.conversionRate ?? unit.conversionToBase,
     sku: unit.sku,
     stock:
@@ -234,6 +257,14 @@ export function mapProduct(product: BackendProduct): Product {
     baseStock: product.stock?.available ?? 0,
     isFeatured: product.isFeatured ?? false,
     isNew,
+    activeDeal: product.activeDeal
+      ? {
+          id: product.activeDeal.id,
+          slug: product.activeDeal.slug,
+          title: product.activeDeal.title,
+          badge: product.activeDeal.badge ?? undefined,
+        }
+      : null,
     createdAt: product.createdAt,
   };
 }

@@ -3,6 +3,7 @@ import {
   clearServerCart,
   getServerCart,
   removeCartItem,
+  type ServerCartItem,
   updateCartItem,
 } from "@/lib/api/cart";
 import { getProducts } from "@/lib/api/products";
@@ -11,45 +12,66 @@ import { getAccessToken } from "@/lib/api/token";
 import { useCartStore, type CartItem } from "@/stores/cart-store";
 import type { Product, ProductUnit } from "@/types";
 
-function mapServerCartItem(item: {
-  productUnitId: string;
-  productId?: string;
-  productName?: string;
-  unitName?: string;
-  unitPrice?: number;
-  quantity: number;
-  available: boolean;
-}, product?: Product, unit?: ProductUnit): CartItem {
+function mapServerCartItem(
+  item: ServerCartItem,
+  product?: Product,
+  unit?: ProductUnit,
+): CartItem {
+  const selectedUnit: ProductUnit = unit
+    ? {
+        ...unit,
+        price: item.unitPrice ?? unit.price,
+        dealId: item.dealId ?? unit.dealId,
+      }
+    : {
+        id: item.productUnitId,
+        unitType: "piece",
+        labelTh: item.unitName ?? "ชิ้น",
+        labelEn: item.unitName ?? "piece",
+        price: item.unitPrice ?? 0,
+        conversionRate: 1,
+        sku: item.productUnitId,
+        stock: item.available ? 999 : 0,
+        dealId: item.dealId ?? undefined,
+      };
+  const hasDiscount =
+    selectedUnit.compareAtPrice !== undefined &&
+    selectedUnit.compareAtPrice > selectedUnit.price;
+  const dealTitle = item.dealTitle ?? product?.activeDeal?.title ?? undefined;
+
   return {
     productId: product?.id ?? item.productId ?? item.productUnitId,
     productName: product?.name ?? item.productName ?? "สินค้า",
     productImage:
       product?.images[0] ??
       getPlaceholderUrl(120, 120, product?.name ?? item.productName ?? "สินค้า"),
-    selectedUnit: unit ?? {
-      id: item.productUnitId,
-      unitType: "piece",
-      labelTh: item.unitName ?? "ชิ้น",
-      labelEn: item.unitName ?? "piece",
-      price: item.unitPrice ?? 0,
-      conversionRate: 1,
-      sku: item.productUnitId,
-      stock: item.available ? 999 : 0,
-    },
+    selectedUnit,
     quantity: item.quantity,
+    dealId: item.dealId ?? product?.activeDeal?.id ?? undefined,
+    dealBadge:
+      item.dealBadge ??
+      product?.activeDeal?.badge ??
+      product?.activeDeal?.title ??
+      undefined,
+    dealTitle,
+    dealSlug: item.dealSlug ?? product?.activeDeal?.slug ?? undefined,
+    sourceLabel: dealTitle ? "แคมเปญ" : undefined,
+    promoDiscountPercent: hasDiscount
+      ? Math.round(
+          ((selectedUnit.compareAtPrice! - selectedUnit.price) /
+            selectedUnit.compareAtPrice!) *
+            100,
+        )
+      : undefined,
+    promoSavedAmount: hasDiscount
+      ? selectedUnit.compareAtPrice! - selectedUnit.price
+      : undefined,
+    lineTotal: item.lineTotal,
   };
 }
 
 async function enrichServerCartItems(
-  items: Array<{
-    productUnitId: string;
-    productId?: string;
-    productName?: string;
-    unitName?: string;
-    unitPrice?: number;
-    quantity: number;
-    available: boolean;
-  }>,
+  items: ServerCartItem[],
 ): Promise<CartItem[]> {
   if (items.length === 0) {
     return [];
@@ -96,6 +118,11 @@ export async function loadCartFromServer() {
       promoDiscountPercent:
         local.promoDiscountPercent ?? item.promoDiscountPercent,
       promoSavedAmount: local.promoSavedAmount ?? item.promoSavedAmount,
+      dealId: item.dealId ?? local.dealId,
+      dealBadge: item.dealBadge ?? local.dealBadge,
+      dealTitle: item.dealTitle ?? local.dealTitle,
+      dealSlug: item.dealSlug ?? local.dealSlug,
+      lineTotal: item.lineTotal,
     };
   });
 
@@ -109,6 +136,7 @@ export async function addToCart(item: CartItem) {
   const unitId = item.selectedUnit.id;
   if (token && unitId) {
     await addCartItem(token, unitId, item.quantity);
+    await loadCartFromServer();
   }
 }
 
@@ -129,6 +157,7 @@ export async function setCartQuantity(
   }
 
   await updateCartItem(token, unitId, quantity);
+  await loadCartFromServer();
 }
 
 export async function removeFromCart(
@@ -169,6 +198,7 @@ export async function changeCartUnit(
   if (newUnit.id) {
     await addCartItem(token, newUnit.id, quantity);
   }
+  await loadCartFromServer();
 }
 
 export async function clearCartEverywhere() {

@@ -35,6 +35,15 @@ export function ProductCard({ product }: ProductCardProps) {
       productImage: product.images[0] ?? "",
       selectedUnit: lowestUnit,
       quantity: 1,
+      dealId: lowestUnit.dealId ?? product.activeDeal?.id,
+      dealBadge: product.activeDeal?.badge ?? product.activeDeal?.title,
+      dealTitle: product.activeDeal?.title,
+      dealSlug: product.activeDeal?.slug,
+      sourceLabel: product.activeDeal ? "แคมเปญ" : undefined,
+      promoDiscountPercent: hasDiscount ? discountPercent : undefined,
+      promoSavedAmount: hasDiscount
+        ? lowestUnit.compareAtPrice! - lowestUnit.price
+        : undefined,
     });
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1500);
@@ -43,6 +52,16 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <article className="group relative flex h-full flex-col overflow-hidden rounded-lg border bg-white transition-all hover:shadow-lg">
       <div className="absolute left-2 top-2 z-10 flex flex-col gap-1">
+        {product.activeDeal && (
+          <Link
+            href={`/campaigns/${product.activeDeal.slug}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Badge className="bg-primary text-white hover:bg-primary/90">
+              {product.activeDeal.badge ?? "แคมเปญ"}
+            </Badge>
+          </Link>
+        )}
         {hasDiscount && (
           <Badge className="bg-red-500 text-white hover:bg-red-500">
             -{discountPercent}%

@@ -1,19 +1,25 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api/client";
 
+export interface ServerCartItem {
+  id: string;
+  productUnitId: string;
+  productId?: string;
+  productName?: string;
+  unitName?: string;
+  unitPrice?: number;
+  quantity: number;
+  lineTotal?: number;
+  available: boolean;
+  dealId?: string | null;
+  dealBadge?: string | null;
+  dealTitle?: string | null;
+  dealSlug?: string | null;
+}
+
 export async function getServerCart(token: string) {
   return apiGet<{
     id: string;
-    items: Array<{
-      id: string;
-      productUnitId: string;
-      productId?: string;
-      productName?: string;
-      unitName?: string;
-      unitPrice?: number;
-      quantity: number;
-      lineTotal?: number;
-      available: boolean;
-    }>;
+    items: ServerCartItem[];
     subtotal: number;
   }>("/cart", { token });
 }

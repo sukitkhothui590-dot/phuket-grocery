@@ -92,7 +92,8 @@ export default function CartPage() {
   const selectedCount = selectedItems.length;
   const allSelected = items.length > 0 && selectedCount === items.length;
   const subtotal = selectedItems.reduce(
-    (sum, item) => sum + item.selectedUnit.price * item.quantity,
+    (sum, item) =>
+      sum + (item.lineTotal ?? item.selectedUnit.price * item.quantity),
     0
   );
   const appliedDiscount = coupon ? Math.min(discount, subtotal) : 0;
@@ -206,7 +207,29 @@ export default function CartPage() {
           {items.map((item) => {
             const product = productCache[item.productId];
             const availableUnits = getProductUnits(product);
-            const itemSubtotal = item.selectedUnit.price * item.quantity;
+            const itemSubtotal =
+              item.lineTotal ?? item.selectedUnit.price * item.quantity;
+            const dealTitle = item.dealTitle ?? product?.activeDeal?.title;
+            const dealBadge =
+              item.dealBadge ??
+              product?.activeDeal?.badge ??
+              product?.activeDeal?.title;
+            const dealSlug = item.dealSlug ?? product?.activeDeal?.slug;
+            const compareAtPrice = item.selectedUnit.compareAtPrice;
+            const promoDiscountPercent =
+              item.promoDiscountPercent ??
+              (compareAtPrice && compareAtPrice > item.selectedUnit.price
+                ? Math.round(
+                    ((compareAtPrice - item.selectedUnit.price) /
+                      compareAtPrice) *
+                      100,
+                  )
+                : undefined);
+            const promoSavedAmount =
+              item.promoSavedAmount ??
+              (compareAtPrice && compareAtPrice > item.selectedUnit.price
+                ? compareAtPrice - item.selectedUnit.price
+                : undefined);
             const selected = selectedKeys.includes(
               getSelectionKey(item.productId, item.selectedUnit.sku)
             );
@@ -264,26 +287,63 @@ export default function CartPage() {
                       </Link>
 
                       {(item.sourceLabel ||
-                        item.promoDiscountPercent ||
-                        item.promoSavedAmount) && (
+                        dealBadge ||
+                        dealTitle ||
+                        promoDiscountPercent ||
+                        promoSavedAmount) && (
                         <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                          {item.sourceLabel && (
+                          {dealTitle &&
+                            (dealSlug ? (
+                              <Link
+                                href={`/campaigns/${dealSlug}`}
+                                className="inline-flex max-w-full items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/15"
+                              >
+                                <Tag className="h-3 w-3 shrink-0" />
+                                <span className="truncate">
+                                  จากแคมเปญ {dealTitle}
+                                </span>
+                              </Link>
+                            ) : (
+                              <span className="inline-flex max-w-full items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
+                                <Tag className="h-3 w-3 shrink-0" />
+                                <span className="truncate">
+                                  จากแคมเปญ {dealTitle}
+                                </span>
+                              </span>
+                            ))}
+                          {dealBadge &&
+                            !dealTitle &&
+                            (dealSlug ? (
+                              <Link
+                                href={`/campaigns/${dealSlug}`}
+                                className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary hover:bg-primary/15"
+                              >
+                                <Tag className="h-3 w-3" />
+                                {dealBadge}
+                              </Link>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary">
+                                <Tag className="h-3 w-3" />
+                                {dealBadge}
+                              </span>
+                            ))}
+                          {item.sourceLabel && !dealTitle && (
                             <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
                               <Tag className="h-3 w-3" />
                               จาก {item.sourceLabel}
                             </span>
                           )}
-                          {typeof item.promoDiscountPercent === "number" && (
+                          {typeof promoDiscountPercent === "number" && (
                             <span className="inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-[11px] font-bold text-destructive ring-1 ring-destructive/10">
-                              ลด {item.promoDiscountPercent}%
+                              ลด {promoDiscountPercent}%
                             </span>
                           )}
-                          {typeof item.promoSavedAmount === "number" &&
-                            item.promoSavedAmount > 0 && (
+                          {typeof promoSavedAmount === "number" &&
+                            promoSavedAmount > 0 && (
                               <span className="text-[11px] font-medium text-destructive">
                                 ประหยัด ฿
                                 {(
-                                  item.promoSavedAmount * item.quantity
+                                  promoSavedAmount * item.quantity
                                 ).toLocaleString()}
                               </span>
                             )}
@@ -333,7 +393,7 @@ export default function CartPage() {
 
                   <div className="flex items-center justify-between text-sm lg:block lg:text-center">
                     <span className="text-muted-foreground lg:hidden">ราคาต่อชิ้น</span>
-                    <div className="lg:flex lg:flex-col lg:items-center">
+                    <div className="flex flex-col items-end lg:items-center">
                       <span className="text-foreground">
                         ฿{item.selectedUnit.price.toLocaleString()}
                       </span>
@@ -554,14 +614,24 @@ export default function CartPage() {
         </div>
       </div>
 
-      <CouponPicker
-        open={couponPickerOpen}
-        onClose={() => setCouponPickerOpen(false)}
-        onApplyCode={handleApplyCoupon}
-        loading={couponLoading}
-        error={couponError}
-        appliedCode={coupon?.code}
-      />
+      {couponPickerOpen && (
+        <CouponPicker
+          open
+          onClose={() => setCouponPickerOpen(false)}
+          onApplyCode={handleApplyCoupon}
+          loading={couponLoading}
+          error={couponError}
+          appliedCode={coupon?.code}
+          token={accessToken}
+          cartItems={selectedItems
+            .filter((item) => item.selectedUnit.id)
+            .map((item) => ({
+              productId: item.productId,
+              unitId: item.selectedUnit.id!,
+              quantity: item.quantity,
+            }))}
+        />
+      )}
     </div>
   );
 }

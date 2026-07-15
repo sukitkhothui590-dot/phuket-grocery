@@ -14,6 +14,13 @@ export interface CartItem {
   promoDiscountPercent?: number;
   /** Saved amount per unit when added from a promo */
   promoSavedAmount?: number;
+  /** Campaign pricing metadata returned by the catalog/cart API. */
+  dealId?: string;
+  dealBadge?: string;
+  dealTitle?: string;
+  dealSlug?: string;
+  /** Authoritative priced line total returned by the server cart. */
+  lineTotal?: number;
 }
 
 interface CartState {
@@ -62,6 +69,11 @@ export const useCartStore = create<CartState>()(
                         item.promoDiscountPercent ?? i.promoDiscountPercent,
                       promoSavedAmount:
                         item.promoSavedAmount ?? i.promoSavedAmount,
+                      dealId: item.dealId ?? i.dealId,
+                      dealBadge: item.dealBadge ?? i.dealBadge,
+                      dealTitle: item.dealTitle ?? i.dealTitle,
+                      dealSlug: item.dealSlug ?? i.dealSlug,
+                      lineTotal: undefined,
                     }
                   : i
               ),
@@ -87,7 +99,7 @@ export const useCartStore = create<CartState>()(
         set((state) => ({
           items: state.items.map((i) =>
             i.productId === productId && i.selectedUnit.sku === sku
-              ? { ...i, quantity }
+              ? { ...i, quantity, lineTotal: undefined }
               : i
           ),
         }));
@@ -97,7 +109,7 @@ export const useCartStore = create<CartState>()(
         set((state) => ({
           items: state.items.map((i) =>
             i.productId === productId && i.selectedUnit.sku === oldSku
-              ? { ...i, selectedUnit: newUnit }
+              ? { ...i, selectedUnit: newUnit, lineTotal: undefined }
               : i
           ),
         }));
@@ -124,7 +136,9 @@ export const useCartStore = create<CartState>()(
 
       getSubtotal: () => {
         return get().items.reduce(
-          (sum, item) => sum + item.selectedUnit.price * item.quantity,
+          (sum, item) =>
+            sum +
+            (item.lineTotal ?? item.selectedUnit.price * item.quantity),
           0
         );
       },

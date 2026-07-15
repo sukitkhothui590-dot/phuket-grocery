@@ -6,9 +6,9 @@ export interface NavLinkItem {
 
 export const PROMOTION_NAV_ITEMS: NavLinkItem[] = [
   {
-    label: "โปรโมชั่นทั้งหมด",
-    href: "/#promotions",
-    description: "รวมดีลและสิทธิพิเศษล่าสุด",
+    label: "แคมเปญลดราคา",
+    href: "/campaigns",
+    description: "รวมสินค้าราคาพิเศษจากร้าน",
   },
   {
     label: "สินค้าแนะนำ",

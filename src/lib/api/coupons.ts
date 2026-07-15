@@ -1,5 +1,6 @@
 import { apiGet, apiPost } from "@/lib/api/client";
 import type {
+  CartCoupon,
   ClaimableCoupon,
   CouponCategory,
   SavedCoupon,
@@ -33,6 +34,39 @@ interface BackendCouponBase {
   expiresAt?: string | null;
   couponId?: string;
   userId?: string;
+  applicable?: boolean;
+  discountPreview?: number;
+  reason?: string | null;
+  message?: string | null;
+}
+
+export async function getCouponsForCart(
+  items: Array<{ productId: string; unitId: string; quantity: number }>,
+  token?: string | null,
+): Promise<{ subtotal: number; coupons: CartCoupon[] }> {
+  const response = await apiPost<{
+    subtotal: number;
+    coupons: BackendCouponBase[];
+  }>(
+    "/coupons/for-cart",
+    { items },
+    { token },
+  );
+
+  if (!response.success) {
+    return { subtotal: 0, coupons: [] };
+  }
+
+  return {
+    subtotal: response.data.subtotal,
+    coupons: response.data.coupons.map((coupon) => ({
+      ...mapClaimableCoupon(coupon),
+      applicable: coupon.applicable ?? false,
+      discountPreview: coupon.discountPreview ?? 0,
+      reason: coupon.reason ?? undefined,
+      message: coupon.message ?? undefined,
+    })),
+  };
 }
 
 function mapDiscountType(type?: string): "fixed" | "percentage" {

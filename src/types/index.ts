@@ -2,6 +2,7 @@ export * from "./product";
 export * from "./order";
 export * from "./user";
 export * from "./coupon";
+export * from "./campaign";
 
 export interface BlogPost {
   id: string;

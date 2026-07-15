@@ -39,6 +39,10 @@ export function PromoCarouselCard({ product }: PromoCarouselCardProps) {
       sourceLabel: "ดีลพิเศษ",
       promoDiscountPercent: discountPercent,
       promoSavedAmount: savedAmount,
+      dealId: unit.dealId ?? product.activeDeal?.id,
+      dealBadge: product.activeDeal?.badge ?? product.activeDeal?.title,
+      dealTitle: product.activeDeal?.title,
+      dealSlug: product.activeDeal?.slug,
     });
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1500);

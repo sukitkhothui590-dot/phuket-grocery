@@ -85,6 +85,15 @@ export function ProductDetailClient({
       productImage: images[0],
       selectedUnit,
       quantity,
+      dealId: selectedUnit.dealId ?? product.activeDeal?.id,
+      dealBadge: product.activeDeal?.badge ?? product.activeDeal?.title,
+      dealTitle: product.activeDeal?.title,
+      dealSlug: product.activeDeal?.slug,
+      sourceLabel: product.activeDeal ? "แคมเปญ" : undefined,
+      promoDiscountPercent: hasDiscount ? discountPercent : undefined,
+      promoSavedAmount: hasDiscount
+        ? selectedUnit.compareAtPrice! - selectedUnit.price
+        : undefined,
     });
     setAddedFeedback(true);
     setTimeout(() => setAddedFeedback(false), 1500);
@@ -207,6 +216,13 @@ export function ProductDetailClient({
                 ใหม่
               </Badge>
             )}
+            {product.activeDeal && (
+              <Link href={`/campaigns/${product.activeDeal.slug}`}>
+                <Badge className="mt-1 bg-primary text-white hover:bg-primary/90">
+                  {product.activeDeal.badge ?? "แคมเปญ"}
+                </Badge>
+              </Link>
+            )}
           </div>
 
           {/* Rating */}
@@ -240,6 +256,14 @@ export function ProductDetailClient({
               </span>
             )}
           </div>
+          {product.activeDeal && (
+            <Link
+              href={`/campaigns/${product.activeDeal.slug}`}
+              className="mt-2 inline-flex text-xs font-semibold text-primary hover:underline"
+            >
+              ดูแคมเปญ: {product.activeDeal.title}
+            </Link>
+          )}
 
           <Separator className="my-4" />
 
