@@ -3,6 +3,10 @@ import { ArrowRight, Megaphone } from "lucide-react";
 import { CampaignCard } from "@/components/campaign/campaign-card";
 import type { CampaignSummary } from "@/types";
 
+/**
+ * Optional P2 marketing strip for campaign hub cards.
+ * Not used as the product source for "ดีลพิเศษ" — that comes from onSale products.
+ */
 export function HomeCampaigns({
   campaigns,
 }: {
@@ -19,10 +23,10 @@ export function HomeCampaigns({
           </div>
           <div>
             <h2 className="text-xl font-bold text-foreground">
-              แคมเปญลดราคา
+              แคมเปญที่กำลังจัด
             </h2>
             <p className="text-xs text-muted-foreground">
-              สินค้าราคาพิเศษจากภูเก็ตโกรเซอรี่
+              ดูรายละเอียดแคมเปญ (ไม่ใช่แหล่งสินค้าดีลพิเศษ)
             </p>
           </div>
         </div>

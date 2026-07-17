@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProductRating } from "@/components/product/product-rating";
 import type { Product } from "@/types";
 import { addToCart } from "@/lib/cart-actions";
+import { getDisplayUnit, getPromoDetails } from "@/lib/product-promo";
 
 interface ProductCardProps {
   product: Product;
@@ -14,17 +15,14 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const [added, setAdded] = useState(false);
-  const lowestUnit = product.units[0];
+  const displayUnit = getDisplayUnit(product);
+
+  if (!displayUnit) return null;
 
   const hasDiscount =
-    lowestUnit.compareAtPrice && lowestUnit.compareAtPrice > lowestUnit.price;
-  const discountPercent = hasDiscount
-    ? Math.round(
-        ((lowestUnit.compareAtPrice! - lowestUnit.price) /
-          lowestUnit.compareAtPrice!) *
-          100,
-      )
-    : 0;
+    !!displayUnit.compareAtPrice &&
+    displayUnit.compareAtPrice > displayUnit.price;
+  const { discountPercent, savedAmount } = getPromoDetails(displayUnit);
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -33,17 +31,19 @@ export function ProductCard({ product }: ProductCardProps) {
       productId: product.id,
       productName: product.name,
       productImage: product.images[0] ?? "",
-      selectedUnit: lowestUnit,
+      selectedUnit: displayUnit,
       quantity: 1,
-      dealId: lowestUnit.dealId ?? product.activeDeal?.id,
+      dealId: displayUnit.dealId ?? product.activeDeal?.id,
       dealBadge: product.activeDeal?.badge ?? product.activeDeal?.title,
       dealTitle: product.activeDeal?.title,
       dealSlug: product.activeDeal?.slug,
-      sourceLabel: product.activeDeal ? "แคมเปญ" : undefined,
+      sourceLabel: product.activeDeal
+        ? "แคมเปญ"
+        : hasDiscount
+          ? "ดีลพิเศษ"
+          : undefined,
       promoDiscountPercent: hasDiscount ? discountPercent : undefined,
-      promoSavedAmount: hasDiscount
-        ? lowestUnit.compareAtPrice! - lowestUnit.price
-        : undefined,
+      promoSavedAmount: hasDiscount ? savedAmount : undefined,
     });
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1500);
@@ -62,7 +62,7 @@ export function ProductCard({ product }: ProductCardProps) {
             </Badge>
           </Link>
         )}
-        {hasDiscount && (
+        {hasDiscount && discountPercent > 0 && (
           <Badge className="bg-red-500 text-white hover:bg-red-500">
             -{discountPercent}%
           </Badge>
@@ -99,19 +99,19 @@ export function ProductCard({ product }: ProductCardProps) {
         />
 
         <p className="mt-1 text-xs text-muted-foreground">
-          {lowestUnit.labelTh}
+          {displayUnit.labelTh}
         </p>
 
         <div className="mt-auto flex items-end gap-2 pt-2">
           <div className="flex items-baseline gap-0.5 text-primary">
             <span className="text-base font-bold leading-none">฿</span>
             <span className="text-[28px] font-extrabold leading-none tracking-tight">
-              {lowestUnit.price.toLocaleString()}
+              {displayUnit.price.toLocaleString()}
             </span>
           </div>
           {hasDiscount && (
             <span className="mb-0.5 text-sm text-muted-foreground line-through">
-              ฿{lowestUnit.compareAtPrice!.toLocaleString()}
+              ฿{displayUnit.compareAtPrice!.toLocaleString()}
             </span>
           )}
         </div>

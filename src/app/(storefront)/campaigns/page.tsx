@@ -1,4 +1,5 @@
 import { Megaphone, PackageOpen } from "lucide-react";
+import Link from "next/link";
 import { CampaignCard } from "@/components/campaign/campaign-card";
 import { getActiveCampaigns } from "@/lib/api/campaigns";
 
@@ -15,8 +16,10 @@ export default async function CampaignsPage() {
           </h1>
         </div>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          รวมสินค้าราคาพิเศษที่กำลังจัดรายการ
-          ราคาส่วนลดถูกคำนวณจากระบบของร้านแล้ว
+          รายละเอียดแคมเปญที่กำลังจัด — สินค้าดีลพิเศษทั้งหมดดูได้ที่{" "}
+          <Link href="/deals" className="font-semibold text-primary hover:underline">
+            ดีลพิเศษ
+          </Link>
         </p>
       </header>
 

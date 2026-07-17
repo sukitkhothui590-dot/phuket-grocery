@@ -67,7 +67,8 @@ export function NavBar({ categories }: { categories: Category[] }) {
 
   const isProductsActive =
     pathname.startsWith("/categories") || pathname.startsWith("/products");
-  const isPromotionsActive = pathname.startsWith("/campaigns");
+  const isPromotionsActive =
+    pathname.startsWith("/campaigns") || pathname.startsWith("/deals");
   const isSellActive = pathname === SELL_WITH_US_HREF;
 
   return (

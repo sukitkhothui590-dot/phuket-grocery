@@ -14,11 +14,22 @@ export function getBestPromoUnit(product: Product): ProductUnit | null {
   });
 }
 
+/** Prefer the best discounted unit; fall back to the first catalog unit. */
+export function getDisplayUnit(product: Product): ProductUnit | undefined {
+  return getBestPromoUnit(product) ?? product.units[0];
+}
+
 export function getPromoDetails(unit: ProductUnit) {
-  const originalPrice = unit.compareAtPrice ?? unit.price;
+  const originalPrice =
+    unit.compareAtPrice && unit.compareAtPrice > unit.price
+      ? unit.compareAtPrice
+      : unit.price;
   const salePrice = unit.price;
-  const savedAmount = originalPrice - salePrice;
-  const discountPercent = Math.round((savedAmount / originalPrice) * 100);
+  const savedAmount = Math.max(0, originalPrice - salePrice);
+  const discountPercent =
+    originalPrice > 0 && savedAmount > 0
+      ? Math.round((savedAmount / originalPrice) * 100)
+      : 0;
 
   return {
     originalPrice,

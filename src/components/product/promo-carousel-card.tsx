@@ -14,10 +14,12 @@ interface PromoCarouselCardProps {
 
 export function PromoCarouselCard({ product }: PromoCarouselCardProps) {
   const [added, setAdded] = useState(false);
-  const unit = getBestPromoUnit(product);
+  const unit = getBestPromoUnit(product) ?? product.units[0];
 
   if (!unit) return null;
 
+  const hasDiscount =
+    !!unit.compareAtPrice && unit.compareAtPrice > unit.price;
   const { originalPrice, salePrice, savedAmount, discountPercent } =
     getPromoDetails(unit);
 
@@ -37,8 +39,8 @@ export function PromoCarouselCard({ product }: PromoCarouselCardProps) {
       selectedUnit: unit,
       quantity: 1,
       sourceLabel: "ดีลพิเศษ",
-      promoDiscountPercent: discountPercent,
-      promoSavedAmount: savedAmount,
+      promoDiscountPercent: hasDiscount ? discountPercent : undefined,
+      promoSavedAmount: hasDiscount ? savedAmount : undefined,
       dealId: unit.dealId ?? product.activeDeal?.id,
       dealBadge: product.activeDeal?.badge ?? product.activeDeal?.title,
       dealTitle: product.activeDeal?.title,
@@ -50,12 +52,24 @@ export function PromoCarouselCard({ product }: PromoCarouselCardProps) {
 
   return (
     <article className="group relative flex h-full flex-col rounded-xl border border-border bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl">
-      {/* Discount badge — floats on top edge */}
-      <div className="absolute -top-px left-3 z-20 flex items-center gap-1 rounded-b-lg bg-gradient-to-br from-destructive to-red-600 px-2.5 py-1.5 text-white shadow-lg shadow-destructive/35">
-        <span className="text-[10px] font-medium leading-none">ลด</span>
-        <span className="text-sm font-extrabold leading-none">
-          {discountPercent}%
-        </span>
+      <div className="absolute left-3 top-0 z-20 flex flex-col gap-1">
+        {hasDiscount && discountPercent > 0 && (
+          <div className="flex items-center gap-1 rounded-b-lg bg-gradient-to-br from-destructive to-red-600 px-2.5 py-1.5 text-white shadow-lg shadow-destructive/35">
+            <span className="text-[10px] font-medium leading-none">ลด</span>
+            <span className="text-sm font-extrabold leading-none">
+              {discountPercent}%
+            </span>
+          </div>
+        )}
+        {product.activeDeal && (
+          <Link
+            href={`/campaigns/${product.activeDeal.slug}`}
+            onClick={(event) => event.stopPropagation()}
+            className="rounded-md bg-primary px-2 py-1 text-[10px] font-semibold text-white shadow-sm hover:bg-primary/90"
+          >
+            {product.activeDeal.badge ?? "แคมเปญ"}
+          </Link>
+        )}
       </div>
 
       <Link
@@ -92,15 +106,19 @@ export function PromoCarouselCard({ product }: PromoCarouselCardProps) {
               {salePrice.toLocaleString()}
             </span>
           </div>
-          <span className="mb-1 text-sm text-muted-foreground line-through">
-            ฿{originalPrice.toLocaleString()}
-          </span>
+          {hasDiscount && (
+            <span className="mb-1 text-sm text-muted-foreground line-through">
+              ฿{originalPrice.toLocaleString()}
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-[11px] font-bold text-destructive ring-1 ring-destructive/10">
-            ประหยัด ฿{savedAmount.toLocaleString()}
-          </span>
+          {hasDiscount && savedAmount > 0 && (
+            <span className="inline-flex items-center rounded-md bg-red-50 px-1.5 py-0.5 text-[11px] font-bold text-destructive ring-1 ring-destructive/10">
+              ประหยัด ฿{savedAmount.toLocaleString()}
+            </span>
+          )}
           {pricePerPiece && (
             <span className="truncate text-[11px] text-muted-foreground">
               ฿{pricePerPiece.toLocaleString()}/{pieceUnit.labelTh}

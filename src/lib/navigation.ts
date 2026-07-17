@@ -6,19 +6,19 @@ export interface NavLinkItem {
 
 export const PROMOTION_NAV_ITEMS: NavLinkItem[] = [
   {
+    label: "ดีลพิเศษ",
+    href: "/deals",
+    description: "สินค้าราคาพิเศษจากร้านและแคมเปญ",
+  },
+  {
     label: "แคมเปญลดราคา",
     href: "/campaigns",
-    description: "รวมสินค้าราคาพิเศษจากร้าน",
+    description: "รายละเอียดแคมเปญที่กำลังจัด",
   },
   {
     label: "สินค้าแนะนำ",
     href: "/#featured-products",
     description: "สินค้าคัดสรรขายดี",
-  },
-  {
-    label: "ซื้อยกลังราคาส่ง",
-    href: "/categories",
-    description: "เหมาะสำหรับร้านค้าและองค์กร",
   },
   {
     label: "ส่งฟรีเมื่อครบ 1,500",

@@ -15,6 +15,8 @@ export async function getProducts(params?: {
   sort?: "price-asc" | "price-desc" | "newest";
   page?: number;
   limit?: number;
+  /** Union of static compareAt discounts and active campaign products. */
+  onSale?: boolean;
 }): Promise<{ products: Product[]; total: number }> {
   const response = await apiGet<BackendProduct[]>("/products", {
     searchParams: {
@@ -22,6 +24,7 @@ export async function getProducts(params?: {
       search: params?.search,
       page: params?.page ?? 1,
       limit: params?.limit ?? 12,
+      onSale: params?.onSale ? "true" : undefined,
       sort:
         params?.sort === "price-asc"
           ? "price_asc"
@@ -83,17 +86,31 @@ export async function getFeaturedProducts(): Promise<Product[]> {
   return enrichProductsWithRatings(response.data.map(mapProduct));
 }
 
+/** Special deals — always from `GET /products?onSale=true`, never from campaigns/active. */
 export async function getPromoProducts(limit = 12): Promise<Product[]> {
-  const { products } = await getProducts({ limit: 50 });
-  const promoProducts = products
-    .filter((product) =>
-      product.units.some(
-        (unit) => unit.compareAtPrice && unit.compareAtPrice > unit.price,
-      ),
-    )
-    .slice(0, limit);
+  const { products } = await getProducts({
+    onSale: true,
+    page: 1,
+    limit,
+  });
 
-  return enrichProductsWithRatings(promoProducts);
+  return enrichProductsWithRatings(products);
+}
+
+export async function getOnSaleProducts(params?: {
+  page?: number;
+  limit?: number;
+}): Promise<{ products: Product[]; total: number }> {
+  const result = await getProducts({
+    onSale: true,
+    page: params?.page ?? 1,
+    limit: params?.limit ?? 24,
+  });
+
+  return {
+    products: await enrichProductsWithRatings(result.products),
+    total: result.total,
+  };
 }
 
 export async function getNewProducts(limit = 10): Promise<Product[]> {
