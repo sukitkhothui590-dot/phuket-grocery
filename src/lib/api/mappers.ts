@@ -283,17 +283,27 @@ export function mapCategories(items: BackendCategory[]): Category[] {
     image: item.icon ?? undefined,
   });
 
-  return roots.map((root) => ({
-    id: root.id,
-    name: root.name,
-    slug: root.slug,
-    image: root.icon ?? getPlaceholderUrl(120, 120, root.name),
-    productCount: root.productCount,
-    subcategories: activeItems
+  return roots.map((root) => {
+    const subcategories = activeItems
       .filter((item) => item.parentId === root.id)
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-      .map(toSubcategory),
-  }));
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+    const childCount = subcategories.reduce(
+      (sum, item) => sum + (item.productCount ?? 0),
+      0,
+    );
+    const ownCount = root.productCount ?? 0;
+
+    return {
+      id: root.id,
+      name: root.name,
+      slug: root.slug,
+      image: root.icon ?? getPlaceholderUrl(120, 120, root.name),
+      // API often leaves parent productCount at 0 while children hold inventory.
+      productCount: ownCount > 0 ? ownCount : childCount,
+      subcategories: subcategories.map(toSubcategory),
+    };
+  });
 }
 
 export function mapBanner(banner: BackendBanner): Banner {

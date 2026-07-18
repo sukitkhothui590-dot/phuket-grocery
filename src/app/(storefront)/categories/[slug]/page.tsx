@@ -1,4 +1,4 @@
-import { getCategoryBySlug, getProducts } from "@/lib/api/products";
+import { getCategoryBySlug, getProductsInCategory } from "@/lib/api/products";
 import { notFound } from "next/navigation";
 import { CategoryProductsClient } from "./category-products-client";
 
@@ -20,19 +20,23 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   const sort = (sp.sort as "price-asc" | "price-desc" | "newest") || undefined;
 
-  const { products } = await getProducts({
-    categoryId: category.id,
-    subcategoryId: sp.sub || undefined,
+  const { products } = await getProductsInCategory(category, {
+    sub: sp.sub || undefined,
     search: sp.search || undefined,
     sort,
     limit: 100,
   });
 
+  const activeSub =
+    category.subcategories.find(
+      (sub) => sub.slug === sp.sub || sub.id === sp.sub,
+    )?.slug ?? "";
+
   return (
     <CategoryProductsClient
       category={category}
       products={products}
-      currentSub={sp.sub ?? ""}
+      currentSub={activeSub}
       currentSearch={sp.search ?? ""}
       currentSort={sp.sort ?? ""}
     />

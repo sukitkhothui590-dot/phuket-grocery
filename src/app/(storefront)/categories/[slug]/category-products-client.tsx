@@ -26,7 +26,7 @@ interface CategoryProductsClientProps {
 }
 
 const SORT_OPTIONS = [
-  { value: "", label: "เรียงเริ่มต้น" },
+  { value: "default", label: "เรียงเริ่มต้น" },
   { value: "newest", label: "ใหม่ล่าสุด" },
   { value: "price-asc", label: "ราคาต่ำ → สูง" },
   { value: "price-desc", label: "ราคาสูง → ต่ำ" },
@@ -64,13 +64,17 @@ export function CategoryProductsClient({
     updateParams({ search: searchInput });
   };
 
-  const handleSubcategoryClick = (subId: string) => {
-    updateParams({ sub: currentSub === subId ? "" : subId });
+  const handleSubcategoryClick = (subSlug: string) => {
+    updateParams({ sub: currentSub === subSlug ? "" : subSlug });
     setMobileFilterOpen(false);
   };
 
   const handleSortChange = (value: string | null) => {
-    if (value) updateParams({ sort: value });
+    if (!value || value === "default") {
+      updateParams({ sort: "" });
+      return;
+    }
+    updateParams({ sort: value });
   };
 
   const clearFilters = () => {
@@ -96,10 +100,10 @@ export function CategoryProductsClient({
       {category.subcategories.map((sub) => (
         <button
           key={sub.id}
-          onClick={() => handleSubcategoryClick(sub.id)}
+          onClick={() => handleSubcategoryClick(sub.slug)}
           className={cn(
             "w-full rounded-md px-3 py-2 text-left text-sm transition-colors",
-            currentSub === sub.id
+            currentSub === sub.slug
               ? "bg-primary/10 font-medium text-primary"
               : "text-muted-foreground hover:bg-muted hover:text-foreground"
           )}
@@ -174,7 +178,10 @@ export function CategoryProductsClient({
             ตัวกรอง
           </Button>
 
-          <Select value={currentSort} onValueChange={handleSortChange}>
+          <Select
+            value={currentSort || "default"}
+            onValueChange={handleSortChange}
+          >
             <SelectTrigger className="w-[160px]" size="sm">
               <SelectValue placeholder="เรียงตาม" />
             </SelectTrigger>

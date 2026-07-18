@@ -8,11 +8,50 @@ import {
 import { enrichProductsWithRatings } from "@/lib/product-ratings";
 import type { Category, Product } from "@/types";
 
+type ProductSort = "price-asc" | "price-desc" | "newest";
+
+function toApiSort(sort?: ProductSort) {
+  if (sort === "price-asc") return "price_asc";
+  if (sort === "price-desc") return "price_desc";
+  if (sort === "newest") return "newest";
+  return undefined;
+}
+
+function sortProducts(products: Product[], sort?: ProductSort): Product[] {
+  if (sort === "price-asc") {
+    return [...products].sort(
+      (a, b) => (a.units[0]?.price ?? 0) - (b.units[0]?.price ?? 0),
+    );
+  }
+  if (sort === "price-desc") {
+    return [...products].sort(
+      (a, b) => (b.units[0]?.price ?? 0) - (a.units[0]?.price ?? 0),
+    );
+  }
+  if (sort === "newest") {
+    return [...products].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }
+  return products;
+}
+
+function dedupeProducts(groups: Product[][]): Product[] {
+  const byId = new Map<string, Product>();
+  for (const products of groups) {
+    for (const product of products) {
+      byId.set(product.id, product);
+    }
+  }
+  return [...byId.values()];
+}
+
 export async function getProducts(params?: {
   categoryId?: string;
   subcategoryId?: string;
   search?: string;
-  sort?: "price-asc" | "price-desc" | "newest";
+  sort?: ProductSort;
   page?: number;
   limit?: number;
   /** Union of static compareAt discounts and active campaign products. */
@@ -25,14 +64,7 @@ export async function getProducts(params?: {
       page: params?.page ?? 1,
       limit: params?.limit ?? 12,
       onSale: params?.onSale ? "true" : undefined,
-      sort:
-        params?.sort === "price-asc"
-          ? "price_asc"
-          : params?.sort === "price-desc"
-            ? "price_desc"
-            : params?.sort === "newest"
-              ? "newest"
-              : undefined,
+      sort: toApiSort(params?.sort),
     },
   });
 
@@ -43,6 +75,69 @@ export async function getProducts(params?: {
   return {
     products: response.data.map(mapProduct),
     total: response.meta?.total ?? response.data.length,
+  };
+}
+
+/**
+ * Load products for a storefront category page.
+ * Live API keeps inventory on leaf categories, so "all" unions parent + children.
+ * `sub` accepts subcategory slug or id (nav uses slug; filters may use id).
+ */
+export async function getProductsInCategory(
+  category: Category,
+  options?: {
+    sub?: string;
+    search?: string;
+    sort?: ProductSort;
+    limit?: number;
+  },
+): Promise<{ products: Product[]; total: number }> {
+  const limit = options?.limit ?? 100;
+  const subKey = options?.sub?.trim();
+
+  if (subKey) {
+    const leaf = category.subcategories.find(
+      (sub) => sub.slug === subKey || sub.id === subKey,
+    );
+    if (leaf) {
+      return getProducts({
+        categoryId: leaf.id,
+        search: options?.search,
+        sort: options?.sort,
+        limit,
+        page: 1,
+      });
+    }
+  }
+
+  const scopeIds = [
+    category.id,
+    ...category.subcategories.map((sub) => sub.id),
+  ];
+
+  const pages = await Promise.all(
+    scopeIds.map((categoryId) =>
+      getProducts({
+        categoryId,
+        search: options?.search,
+        sort: options?.sort,
+        limit,
+        page: 1,
+      }),
+    ),
+  );
+
+  const products = sortProducts(
+    dedupeProducts(pages.map((page) => page.products)),
+    options?.sort,
+  ).slice(0, limit);
+
+  const total = pages.reduce((sum, page) => sum + page.total, 0);
+
+  return {
+    products,
+    // Prefer deduped size when we have the full window; fall back to summed totals.
+    total: products.length < limit ? products.length : Math.max(total, products.length),
   };
 }
 
@@ -156,6 +251,14 @@ export async function getProductsByCategory(
   categoryId: string,
   limit = 5,
 ): Promise<Product[]> {
+  const categories = await getCategories();
+  const root = categories.find((category) => category.id === categoryId);
+
+  if (root) {
+    const { products } = await getProductsInCategory(root, { limit });
+    return enrichProductsWithRatings(products);
+  }
+
   const { products } = await getProducts({ categoryId, limit });
   return enrichProductsWithRatings(products);
 }
@@ -173,12 +276,27 @@ export async function getCategories(): Promise<Category[]> {
 export async function getCategoryBySlug(
   slug: string,
 ): Promise<Category | null> {
-  const response = await apiGet<BackendCategory>(`/categories/${slug}`);
+  // Always resolve from the full tree so parent pages keep their subcategories.
+  const categories = await getCategories();
+  return categories.find((category) => category.slug === slug) ?? null;
+}
 
-  if (!response.success) {
-    return null;
+/** Resolve product.categoryId which may be a root or leaf id. */
+export function resolveProductCategory(
+  categories: Category[],
+  categoryId: string,
+): {
+  root: Category;
+  subcategory?: Category["subcategories"][number];
+} | null {
+  for (const root of categories) {
+    if (root.id === categoryId) {
+      return { root };
+    }
+    const subcategory = root.subcategories.find((sub) => sub.id === categoryId);
+    if (subcategory) {
+      return { root, subcategory };
+    }
   }
-
-  const categories = mapCategories([response.data]);
-  return categories[0] ?? null;
+  return null;
 }

@@ -3,6 +3,7 @@ import {
   getProductBySlug,
   getRelatedProducts,
   getCategories,
+  resolveProductCategory,
 } from "@/lib/api/products";
 import { ProductDetailClient } from "@/components/product/product-detail-client";
 
@@ -21,14 +22,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
     getCategories(),
   ]);
 
-  const category = categories.find((c) => c.id === product.categoryId);
+  const resolved = resolveProductCategory(categories, product.categoryId);
+  const categoryName = resolved?.subcategory?.name ?? resolved?.root.name ?? "หมวดหมู่";
+  const categorySlug = resolved
+    ? resolved.subcategory
+      ? `${resolved.root.slug}?sub=${resolved.subcategory.slug}`
+      : resolved.root.slug
+    : "";
 
   return (
     <ProductDetailClient
       product={product}
       relatedProducts={relatedProducts}
-      categoryName={category?.name ?? "หมวดหมู่"}
-      categorySlug={category?.slug ?? ""}
+      categoryName={categoryName}
+      categorySlug={categorySlug}
     />
   );
 }
