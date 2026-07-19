@@ -1,4 +1,5 @@
 import { apiGet, apiPost } from "@/lib/api/client";
+import { resolveMediaUrls } from "@/lib/api/media";
 
 export interface ProductReview {
   id: string;
@@ -25,7 +26,7 @@ function mapReview(review: BackendReview): ProductReview {
     name: review.name,
     rating: review.rating,
     comment: review.comment,
-    images: review.imageUrls ?? review.images ?? [],
+    images: resolveMediaUrls(review.imageUrls ?? review.images ?? []),
     createdAt: review.createdAt,
   };
 }

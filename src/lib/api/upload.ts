@@ -1,7 +1,9 @@
 import { getApiBaseUrl } from "@/lib/api/config";
 import type { ApiResponse } from "@/lib/api/client";
+import { resolveMediaUrl } from "@/lib/api/media";
 
 function buildUploadUrl(path: string) {
+  // POST /backend/uploads (Nest controller under global prefix)
   const base = getApiBaseUrl().replace(/\/$/, "");
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const target = `${base}${normalizedPath}`;
@@ -43,8 +45,8 @@ export async function uploadFile(
     };
   }
 
-  const url =
+  const raw =
     payload.data.url ?? payload.data.imageUrl ?? payload.data.path ?? undefined;
 
-  return { success: true, url };
+  return { success: true, url: raw ? resolveMediaUrl(raw) : undefined };
 }

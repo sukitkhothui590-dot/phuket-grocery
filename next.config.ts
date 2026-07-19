@@ -30,6 +30,12 @@ const nextConfig: NextConfig = {
         source: "/backend/:path*",
         destination: `${apiProxyTarget}/backend/:path*`,
       },
+      // Backend stores media as path-only `/uploads/...` (served outside /backend).
+      // Proxy so browser requests to the storefront origin still load files.
+      {
+        source: "/uploads/:path*",
+        destination: `${apiProxyTarget}/uploads/:path*`,
+      },
     ];
   },
 };

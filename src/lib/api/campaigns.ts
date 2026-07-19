@@ -1,5 +1,6 @@
 import { apiGet } from "@/lib/api/client";
 import { mapProduct, type BackendProduct } from "@/lib/api/mappers";
+import { resolveMediaUrls } from "@/lib/api/media";
 import { getPlaceholderUrl } from "@/lib/placeholder";
 import type {
   CampaignDetail,
@@ -114,12 +115,18 @@ function fallbackProduct(
     name: product.name,
     slug: product.id,
     description: "",
-    images:
-      product.images && product.images.length > 0
-        ? product.images
-        : product.imageUrl
-          ? [product.imageUrl]
-          : [getPlaceholderUrl(400, 400, product.name)],
+    images: (() => {
+      const raw =
+        product.images && product.images.length > 0
+          ? product.images
+          : product.imageUrl
+            ? [product.imageUrl]
+            : [];
+      const resolved = resolveMediaUrls(raw);
+      return resolved.length > 0
+        ? resolved
+        : [getPlaceholderUrl(400, 400, product.name)];
+    })(),
     categoryId: "",
     units,
     baseUnit: units[0]?.unitType ?? "piece",

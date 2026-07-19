@@ -1,3 +1,4 @@
+import { resolveMediaUrl, resolveMediaUrls } from "@/lib/api/media";
 import { getPlaceholderUrl } from "@/lib/placeholder";
 import type {
   Address,
@@ -238,12 +239,17 @@ export function mapProduct(product: BackendProduct): Product {
     product.isNew ??
     Date.now() - createdAt.getTime() < 1000 * 60 * 60 * 24 * 30;
 
-  const images =
+  const rawImages =
     product.images && product.images.length > 0
       ? product.images
       : product.imageUrl
         ? [product.imageUrl]
-        : [getPlaceholderUrl(400, 400, product.name)];
+        : [];
+  const resolvedImages = resolveMediaUrls(rawImages);
+  const images =
+    resolvedImages.length > 0
+      ? resolvedImages
+      : [getPlaceholderUrl(400, 400, product.name)];
 
   return {
     id: product.id,
@@ -283,7 +289,7 @@ export function mapCategories(items: BackendCategory[]): Category[] {
     name: item.name,
     slug: item.slug,
     parentId: item.parentId ?? "",
-    image: item.icon ?? undefined,
+    image: item.icon ? resolveMediaUrl(item.icon) : undefined,
   });
 
   return roots.map((root) => {
@@ -301,7 +307,9 @@ export function mapCategories(items: BackendCategory[]): Category[] {
       id: root.id,
       name: root.name,
       slug: root.slug,
-      image: root.icon ?? getPlaceholderUrl(120, 120, root.name),
+      image: root.icon
+        ? resolveMediaUrl(root.icon)
+        : getPlaceholderUrl(120, 120, root.name),
       // API often leaves parent productCount at 0 while children hold inventory.
       productCount: ownCount > 0 ? ownCount : childCount,
       subcategories: subcategories.map(toSubcategory),
@@ -313,7 +321,7 @@ export function mapBanner(banner: BackendBanner): Banner {
   return {
     id: banner.id,
     title: banner.title,
-    image: banner.imageUrl,
+    image: resolveMediaUrl(banner.imageUrl),
     link: banner.link ?? undefined,
     order: banner.order,
   };
@@ -326,8 +334,9 @@ export function mapBlog(blog: BackendBlog): BlogPost {
     slug: blog.slug,
     excerpt: blog.excerpt ?? "",
     content: blog.content,
-    coverImage:
-      blog.featuredImage ?? getPlaceholderUrl(800, 400, blog.title),
+    coverImage: blog.featuredImage
+      ? resolveMediaUrl(blog.featuredImage)
+      : getPlaceholderUrl(800, 400, blog.title),
     publishedAt: blog.publishedAt ?? blog.createdAt,
     author: blog.author ?? "ภูเก็ตโกรเซอรี่",
   };
@@ -412,9 +421,9 @@ function mapOrderItem(item: BackendOrderItem): OrderItem {
     id: item.id,
     productId: item.productId,
     productName,
-    productImage:
-      item.productImage ??
-      getPlaceholderUrl(120, 120, productName),
+    productImage: item.productImage
+      ? resolveMediaUrl(item.productImage)
+      : getPlaceholderUrl(120, 120, productName),
     selectedUnit: item.selectedUnit ?? {
       id: unitId,
       unitType: "piece",
@@ -438,7 +447,8 @@ export function mapOrder(order: BackendOrder): Order {
   const shippingCost = order.shippingCost ?? order.shippingFee ?? 0;
   const discount = order.discount ?? 0;
   const paymentMethod = mapPaymentMethod(order.paymentMethod);
-  const slipImage = order.slipImage ?? order.paymentSlipUrl ?? undefined;
+  const slipImageRaw = order.slipImage ?? order.paymentSlipUrl ?? undefined;
+  const slipImage = slipImageRaw ? resolveMediaUrl(slipImageRaw) : undefined;
   const baseTotal = Math.max(0, subtotal - discount + shippingCost);
   const reportedTotal = order.total ?? baseTotal;
   const paymentFee =
