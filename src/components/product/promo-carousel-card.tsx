@@ -61,14 +61,20 @@ export function PromoCarouselCard({ product }: PromoCarouselCardProps) {
             </span>
           </div>
         )}
-        {product.activeDeal && (
+        {product.activeDeal ? (
           <Link
             href={`/campaigns/${product.activeDeal.slug}`}
             onClick={(event) => event.stopPropagation()}
             className="rounded-md bg-primary px-2 py-1 text-[10px] font-semibold text-white shadow-sm hover:bg-primary/90"
           >
-            {product.activeDeal.badge ?? "แคมเปญ"}
+            {product.activeDeal.badge ?? product.activeDeal.title ?? "ดีลพิเศษ"}
           </Link>
+        ) : (
+          hasDiscount && (
+            <span className="rounded-md bg-primary px-2 py-1 text-[10px] font-semibold text-white shadow-sm">
+              ดีลพิเศษ
+            </span>
+          )
         )}
       </div>
 

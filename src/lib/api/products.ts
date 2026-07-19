@@ -54,7 +54,10 @@ export async function getProducts(params?: {
   sort?: ProductSort;
   page?: number;
   limit?: number;
-  /** Union of static compareAt discounts and active campaign products. */
+  /**
+   * Special Deal (ดีลพิเศษ): backend union of static compareAt sales
+   * and products under an active campaign. Prefer this over /campaigns/*.
+   */
   onSale?: boolean;
 }): Promise<{ products: Product[]; total: number }> {
   const response = await apiGet<BackendProduct[]>("/products", {
@@ -181,7 +184,10 @@ export async function getFeaturedProducts(): Promise<Product[]> {
   return enrichProductsWithRatings(response.data.map(mapProduct));
 }
 
-/** Special deals — always from `GET /products?onSale=true`, never from campaigns/active. */
+/**
+ * Homepage Special Deal carousel.
+ * Always `GET /products?onSale=true` — never `/campaigns/active`.
+ */
 export async function getPromoProducts(limit = 12): Promise<Product[]> {
   const { products } = await getProducts({
     onSale: true,
@@ -192,6 +198,10 @@ export async function getPromoProducts(limit = 12): Promise<Product[]> {
   return enrichProductsWithRatings(products);
 }
 
+/**
+ * `/deals` Special Deal grid.
+ * Always `GET /products?onSale=true` — never `/campaigns/active`.
+ */
 export async function getOnSaleProducts(params?: {
   page?: number;
   limit?: number;

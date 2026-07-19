@@ -3,6 +3,10 @@ import { PackageOpen, Tag } from "lucide-react";
 import { ProductGrid } from "@/components/product/product-grid";
 import { getOnSaleProducts } from "@/lib/api/products";
 
+/**
+ * Special Deal listing — products from `GET /products?onSale=true` only
+ * (static compareAt sales ∪ active campaign products). Do not load campaigns.
+ */
 export default async function DealsPage() {
   const { products, total } = await getOnSaleProducts({ limit: 48 });
 
@@ -14,8 +18,8 @@ export default async function DealsPage() {
           <h1 className="text-2xl font-bold text-foreground">ดีลพิเศษ</h1>
         </div>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          รวมสินค้าลดราคาจากราคาพิเศษของร้านและแคมเปญที่กำลังจัด
-          ราคาที่แสดงเป็นราคาหลังหักส่วนลดแล้ว
+          สินค้าราคาพิเศษจากร้านและโปรโมชันที่กำลังจัด
+          ราคาที่แสดงเป็นราคาหลังหักส่วนลดแล้วตามระบบ
         </p>
         {total > 0 && (
           <p className="mt-1 text-xs text-muted-foreground">
@@ -41,7 +45,7 @@ export default async function DealsPage() {
           </Link>
         </div>
       ) : (
-        <ProductGrid products={products} />
+        <ProductGrid products={products} sourceLabel="ดีลพิเศษ" />
       )}
     </main>
   );

@@ -15,7 +15,7 @@ const CARD_WIDTH_CLASS =
 /**
  * Homepage "ดีลพิเศษ" block.
  * Products must already come from `GET /products?onSale=true` — do not re-filter
- * or load from `/campaigns/active`.
+ * or load from `/campaigns/active`. Display prices as returned by the backend.
  */
 export function HomePromoCarousel({ products }: HomePromoCarouselProps) {
   if (products.length === 0) {
@@ -39,7 +39,7 @@ export function HomePromoCarousel({ products }: HomePromoCarouselProps) {
     <ProductCarousel
       id="promotions"
       title="ดีลพิเศษ"
-      subtitle="สินค้าราคาพิเศษจากร้านและแคมเปญที่กำลังจัด"
+      subtitle="สินค้าราคาพิเศษจากร้านและโปรโมชันที่กำลังจัด"
       viewAllHref="/deals"
       viewAllLabel="ดูทั้งหมด"
       visibleCount={5}

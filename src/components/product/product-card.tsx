@@ -11,9 +11,14 @@ import { getDisplayUnit, getPromoDetails } from "@/lib/product-promo";
 
 interface ProductCardProps {
   product: Product;
+  /**
+   * Cart provenance label. Special Deal surfaces (`/deals`) should pass
+   * `"ดีลพิเศษ"` so campaign-priced items still read as store sale deals.
+   */
+  sourceLabel?: string;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, sourceLabel }: ProductCardProps) {
   const [added, setAdded] = useState(false);
   const displayUnit = getDisplayUnit(product);
 
@@ -23,6 +28,9 @@ export function ProductCard({ product }: ProductCardProps) {
     !!displayUnit.compareAtPrice &&
     displayUnit.compareAtPrice > displayUnit.price;
   const { discountPercent, savedAmount } = getPromoDetails(displayUnit);
+  const cartSourceLabel =
+    sourceLabel ??
+    (hasDiscount || product.activeDeal ? "ดีลพิเศษ" : undefined);
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -37,11 +45,7 @@ export function ProductCard({ product }: ProductCardProps) {
       dealBadge: product.activeDeal?.badge ?? product.activeDeal?.title,
       dealTitle: product.activeDeal?.title,
       dealSlug: product.activeDeal?.slug,
-      sourceLabel: product.activeDeal
-        ? "แคมเปญ"
-        : hasDiscount
-          ? "ดีลพิเศษ"
-          : undefined,
+      sourceLabel: cartSourceLabel,
       promoDiscountPercent: hasDiscount ? discountPercent : undefined,
       promoSavedAmount: hasDiscount ? savedAmount : undefined,
     });
@@ -58,13 +62,18 @@ export function ProductCard({ product }: ProductCardProps) {
             onClick={(event) => event.stopPropagation()}
           >
             <Badge className="bg-primary text-white hover:bg-primary/90">
-              {product.activeDeal.badge ?? "แคมเปญ"}
+              {product.activeDeal.badge ?? product.activeDeal.title ?? "ดีลพิเศษ"}
             </Badge>
           </Link>
         )}
         {hasDiscount && discountPercent > 0 && (
           <Badge className="bg-red-500 text-white hover:bg-red-500">
             -{discountPercent}%
+          </Badge>
+        )}
+        {!product.activeDeal && hasDiscount && (
+          <Badge className="bg-primary text-white hover:bg-primary/90">
+            ดีลพิเศษ
           </Badge>
         )}
         {product.isNew && (

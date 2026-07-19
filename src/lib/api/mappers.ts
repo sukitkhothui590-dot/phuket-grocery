@@ -252,7 +252,10 @@ export function mapProduct(product: BackendProduct): Product {
     description: product.description ?? "",
     images,
     categoryId: product.categoryId,
-    units: product.units.filter((unit) => unit.isActive).map(mapProductUnit),
+    // Treat missing isActive as active so deal-priced units always render.
+    units: product.units
+      .filter((unit) => unit.isActive !== false)
+      .map(mapProductUnit),
     baseUnit: baseUnit ? mapUnitType(baseUnit) : "piece",
     baseStock: product.stock?.available ?? 0,
     isFeatured: product.isFeatured ?? false,

@@ -6,9 +6,11 @@ import type { Product } from "@/types";
 
 interface ProductGridProps {
   products: Product[];
+  /** Forwarded to each card (e.g. `"ดีลพิเศษ"` on `/deals`). */
+  sourceLabel?: string;
 }
 
-export function ProductGrid({ products }: ProductGridProps) {
+export function ProductGrid({ products, sourceLabel }: ProductGridProps) {
   if (products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -26,7 +28,11 @@ export function ProductGrid({ products }: ProductGridProps) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+        <ProductCard
+          key={product.id}
+          product={product}
+          sourceLabel={sourceLabel}
+        />
       ))}
     </div>
   );
