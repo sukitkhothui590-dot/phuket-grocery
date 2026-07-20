@@ -30,30 +30,34 @@ export function HeroBanner({ banners }: HeroBannerProps) {
 
   return (
     <section className="relative w-full overflow-hidden">
-      {/* Fixed aspect keeps slide height stable when banner assets differ */}
-      <div
-        className="flex aspect-[3/2] sm:aspect-[2/1] md:aspect-[21/9]"
-        style={{
-          width: `${banners.length * 100}%`,
-          transform: `translateX(-${current * (100 / banners.length)}%)`,
-          transition: "transform 500ms ease-in-out",
-        }}
-      >
-        {banners.map((banner) => (
-          <Link
-            key={banner.id}
-            href={banner.link ?? "/categories"}
-            className="relative block h-full"
-            style={{ width: `${100 / banners.length}%` }}
-          >
-            <img
-              src={banner.image}
-              alt={banner.title}
-              className="absolute inset-0 block h-full w-full object-cover"
-              draggable={false}
-            />
-          </Link>
-        ))}
+      {/* Aspect on the viewport-sized frame — NOT the N×100% track
+          (CSS aspect-ratio uses the element's own width, so applying it
+          to the wide track made the banner ~N× taller than intended). */}
+      <div className="relative w-full aspect-[3/2] sm:aspect-[2/1] md:aspect-[21/9]">
+        <div
+          className="absolute inset-y-0 left-0 flex h-full"
+          style={{
+            width: `${banners.length * 100}%`,
+            transform: `translateX(-${current * (100 / banners.length)}%)`,
+            transition: "transform 500ms ease-in-out",
+          }}
+        >
+          {banners.map((banner) => (
+            <Link
+              key={banner.id}
+              href={banner.link ?? "/categories"}
+              className="relative block h-full"
+              style={{ width: `${100 / banners.length}%` }}
+            >
+              <img
+                src={banner.image}
+                alt={banner.title}
+                className="absolute inset-0 block h-full w-full object-cover"
+                draggable={false}
+              />
+            </Link>
+          ))}
+        </div>
       </div>
 
       {banners.length > 1 && (
