@@ -38,19 +38,16 @@ function sortProducts(products: Product[], sort?: ProductSort): Product[] {
   return products;
 }
 
-function dedupeProducts(groups: Product[][]): Product[] {
-  const byId = new Map<string, Product>();
-  for (const products of groups) {
-    for (const product of products) {
-      byId.set(product.id, product);
-    }
-  }
-  return [...byId.values()];
-}
-
 export async function getProducts(params?: {
   categoryId?: string;
   subcategoryId?: string;
+  /** Parent slug expands to parent + direct children on the API. */
+  categorySlug?: string;
+  /**
+   * When true with categoryId, include products on direct child categories.
+   * Prefer this over N parallel per-child requests (avoids API 429s).
+   */
+  includeDescendants?: boolean;
   search?: string;
   sort?: ProductSort;
   page?: number;
@@ -64,6 +61,8 @@ export async function getProducts(params?: {
   const response = await apiGet<BackendProduct[]>("/products", {
     searchParams: {
       categoryId: params?.categoryId ?? params?.subcategoryId,
+      categorySlug: params?.categorySlug,
+      includeDescendants: params?.includeDescendants ? "true" : undefined,
       search: params?.search,
       page: params?.page ?? 1,
       limit: params?.limit ?? 12,
@@ -84,7 +83,8 @@ export async function getProducts(params?: {
 
 /**
  * Load products for a storefront category page.
- * Live API keeps inventory on leaf categories, so "all" unions parent + children.
+ * Live API keeps inventory on leaf categories — use includeDescendants (one
+ * request) instead of parallel parent+child fetches that trip rate limits.
  * `sub` accepts subcategory slug or id (nav uses slug; filters may use id).
  */
 export async function getProductsInCategory(
@@ -116,34 +116,19 @@ export async function getProductsInCategory(
     }
   }
 
-  const scopeIds = [
-    category.id,
-    ...category.subcategories.map((sub) => sub.id),
-  ];
-
-  const pages = await Promise.all(
-    scopeIds.map((categoryId) =>
-      getProducts({
-        categoryId,
-        search: options?.search,
-        sort: options?.sort,
-        limit,
-        page: 1,
-      }),
-    ),
-  );
-
-  const products = sortProducts(
-    dedupeProducts(pages.map((page) => page.products)),
-    options?.sort,
-  ).slice(0, limit);
-
-  const total = pages.reduce((sum, page) => sum + page.total, 0);
+  // Single API call: parent id + direct children (Nest includeDescendants).
+  const result = await getProducts({
+    categoryId: category.id,
+    includeDescendants: true,
+    search: options?.search,
+    sort: options?.sort,
+    limit,
+    page: 1,
+  });
 
   return {
-    products,
-    // Prefer deduped size when we have the full window; fall back to summed totals.
-    total: products.length < limit ? products.length : Math.max(total, products.length),
+    products: sortProducts(result.products, options?.sort),
+    total: result.total,
   };
 }
 
@@ -296,11 +281,47 @@ export async function getCategoryBySlug(
   // Next may leave non-ASCII path segments percent-encoded in `params.slug`.
   const key = decodeRouteParam(slug);
   const categories = await getCategories();
+  const root = categories.find(
+    (category) => category.slug === key || category.slug === slug,
+  );
+  if (root) return root;
+
+  // Leaf slug used as path segment (e.g. /categories/กาแฟ) → parent root.
   return (
-    categories.find(
-      (category) => category.slug === key || category.slug === slug,
+    categories.find((category) =>
+      category.subcategories.some(
+        (sub) => sub.slug === key || sub.slug === slug || sub.id === key,
+      ),
     ) ?? null
   );
+}
+
+/**
+ * Resolve a category route slug to root + optional active subcategory.
+ * Supports both `/categories/parent` and `/categories/leaf` (leaf → parent + sub).
+ */
+export async function resolveCategoryRoute(slug: string): Promise<{
+  category: Category;
+  subFromPath?: string;
+} | null> {
+  const key = decodeRouteParam(slug);
+  const categories = await getCategories();
+
+  const root = categories.find(
+    (category) => category.slug === key || category.slug === slug,
+  );
+  if (root) return { category: root };
+
+  for (const category of categories) {
+    const leaf = category.subcategories.find(
+      (sub) => sub.slug === key || sub.slug === slug || sub.id === key,
+    );
+    if (leaf) {
+      return { category, subFromPath: leaf.slug };
+    }
+  }
+
+  return null;
 }
 
 /** Resolve product.categoryId which may be a root or leaf id. */
