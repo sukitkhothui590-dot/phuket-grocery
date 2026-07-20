@@ -6,6 +6,7 @@ import {
   type BackendProduct,
 } from "@/lib/api/mappers";
 import { enrichProductsWithRatings } from "@/lib/product-ratings";
+import { decodeRouteParam } from "@/lib/route-params";
 import type { Category, Product } from "@/types";
 
 type ProductSort = "price-asc" | "price-desc" | "newest";
@@ -96,7 +97,9 @@ export async function getProductsInCategory(
   },
 ): Promise<{ products: Product[]; total: number }> {
   const limit = options?.limit ?? 100;
-  const subKey = options?.sub?.trim();
+  const subKey = options?.sub?.trim()
+    ? decodeRouteParam(options.sub.trim())
+    : undefined;
 
   if (subKey) {
     const leaf = category.subcategories.find(
@@ -147,7 +150,10 @@ export async function getProductsInCategory(
 export async function getProductBySlug(
   slug: string,
 ): Promise<Product | null> {
-  const response = await apiGet<BackendProduct>(`/products/${slug}`);
+  const key = decodeRouteParam(slug);
+  const response = await apiGet<BackendProduct>(
+    `/products/${encodeURIComponent(key)}`,
+  );
 
   if (!response.success) {
     return null;
@@ -287,8 +293,14 @@ export async function getCategoryBySlug(
   slug: string,
 ): Promise<Category | null> {
   // Always resolve from the full tree so parent pages keep their subcategories.
+  // Next may leave non-ASCII path segments percent-encoded in `params.slug`.
+  const key = decodeRouteParam(slug);
   const categories = await getCategories();
-  return categories.find((category) => category.slug === slug) ?? null;
+  return (
+    categories.find(
+      (category) => category.slug === key || category.slug === slug,
+    ) ?? null
+  );
 }
 
 /** Resolve product.categoryId which may be a root or leaf id. */

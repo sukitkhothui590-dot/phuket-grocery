@@ -3,6 +3,7 @@ import { mapBanner, mapBlog, mapFaq } from "@/lib/api/mappers";
 import { getPublicSettings } from "@/lib/api/settings";
 import { COMPANY_INFO } from "@/lib/constants";
 import { googleReviews as mockGoogleReviews } from "@/lib/mock-data/content";
+import { decodeRouteParam } from "@/lib/route-params";
 import type { Banner, BlogPost, FAQ, GoogleReview, PromotionCard } from "@/types";
 
 const PROMO_STYLES = [
@@ -115,6 +116,7 @@ export async function getBlogPosts(limit?: number): Promise<BlogPost[]> {
 export async function getBlogPostBySlug(
   slug: string,
 ): Promise<BlogPost | null> {
+  const key = decodeRouteParam(slug);
   const response = await apiGet<{
     id: string;
     title: string;
@@ -125,7 +127,7 @@ export async function getBlogPostBySlug(
     featuredImage?: string | null;
     publishedAt?: string | null;
     createdAt: string;
-  }>(`/public/blogs/${slug}`);
+  }>(`/public/blogs/${encodeURIComponent(key)}`);
 
   if (!response.success) {
     return null;

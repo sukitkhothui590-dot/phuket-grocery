@@ -2,6 +2,7 @@ import { apiGet } from "@/lib/api/client";
 import { mapProduct, type BackendProduct } from "@/lib/api/mappers";
 import { resolveMediaUrls } from "@/lib/api/media";
 import { getPlaceholderUrl } from "@/lib/placeholder";
+import { decodeRouteParam } from "@/lib/route-params";
 import type {
   CampaignDetail,
   CampaignDiscountMode,
@@ -180,8 +181,10 @@ export async function getActiveCampaigns(params?: {
 export async function getCampaignBySlug(
   slug: string,
 ): Promise<CampaignDetail | null> {
+  // Decode first so already-encoded Next params are not double-encoded.
+  const key = decodeRouteParam(slug);
   const response = await apiGet<BackendCampaignDetail>(
-    `/campaigns/by-slug/${encodeURIComponent(slug)}`,
+    `/campaigns/by-slug/${encodeURIComponent(key)}`,
   );
 
   if (!response.success || !response.data.isActive) {

@@ -1,4 +1,5 @@
 import { getCategoryBySlug, getProductsInCategory } from "@/lib/api/products";
+import { decodeRouteParam } from "@/lib/route-params";
 import { notFound } from "next/navigation";
 import { CategoryProductsClient } from "./category-products-client";
 
@@ -12,8 +13,10 @@ interface Props {
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
-  const { slug } = await params;
+  const { slug: rawSlug } = await params;
   const sp = await searchParams;
+  const slug = decodeRouteParam(rawSlug);
+  const sub = sp.sub ? decodeRouteParam(sp.sub) : undefined;
 
   const category = await getCategoryBySlug(slug);
   if (!category) notFound();
@@ -21,7 +24,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const sort = (sp.sort as "price-asc" | "price-desc" | "newest") || undefined;
 
   const { products } = await getProductsInCategory(category, {
-    sub: sp.sub || undefined,
+    sub,
     search: sp.search || undefined,
     sort,
     limit: 100,
@@ -29,7 +32,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   const activeSub =
     category.subcategories.find(
-      (sub) => sub.slug === sp.sub || sub.id === sp.sub,
+      (item) => item.slug === sub || item.id === sub,
     )?.slug ?? "";
 
   return (
