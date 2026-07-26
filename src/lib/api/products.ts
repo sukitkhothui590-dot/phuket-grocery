@@ -159,11 +159,11 @@ export async function getProductById(
   return mapProduct(response.data);
 }
 
-export async function getFeaturedProducts(): Promise<Product[]> {
+export async function getFeaturedProducts(limit = 48): Promise<Product[]> {
   const response = await apiGet<BackendProduct[]>("/products", {
     searchParams: {
       isFeatured: "true",
-      limit: 8,
+      limit,
       page: 1,
     },
   });

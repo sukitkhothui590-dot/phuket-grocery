@@ -7,6 +7,7 @@ interface AuthState {
   accessToken: string | null;
   refreshToken: string | null;
   isAuthenticated: boolean;
+  hasHydrated: boolean;
 
   setAuth: (
     user: User,
@@ -16,6 +17,7 @@ interface AuthState {
   setUser: (user: User) => void;
   logout: () => void;
   updateUser: (data: Partial<User>) => void;
+  setHasHydrated: (value: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -25,6 +27,7 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
+      hasHydrated: false,
 
       setAuth: (user, tokens) =>
         set({
@@ -54,7 +57,19 @@ export const useAuthStore = create<AuthState>()(
         set((state) => ({
           user: state.user ? { ...state.user, ...data } : null,
         })),
+      setHasHydrated: (value) => set({ hasHydrated: value }),
     }),
-    { name: "phuket-grocery-auth" },
+    {
+      name: "phuket-grocery-auth",
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        isAuthenticated: state.isAuthenticated,
+      }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+    },
   ),
 );

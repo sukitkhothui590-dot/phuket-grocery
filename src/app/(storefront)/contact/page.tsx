@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import {
   Facebook,
-  Instagram,
   Mail,
   MapPin,
   MessageCircle,
   Phone,
-  Youtube,
 } from "lucide-react";
 import { COMPANY_INFO } from "@/lib/constants";
 import { getStoreSettings } from "@/lib/api/settings";
@@ -37,18 +35,27 @@ export default async function ContactPage() {
       value: settings.storeAddress,
     },
     {
-      icon: Instagram,
+      icon: MessageCircle,
       label: "LINE",
-      value: settings.lineId,
+      value: settings.lineId || COMPANY_INFO.line,
     },
   ];
 
   const socialLinks = [
-    { icon: Facebook, href: settings.facebookUrl, label: "Facebook" },
-    { icon: Instagram, href: COMPANY_INFO.instagramUrl, label: "Instagram" },
-    { icon: MessageCircle, href: settings.lineUrl, label: "LINE" },
-    { icon: Youtube, href: COMPANY_INFO.tiktokUrl, label: "TikTok" },
-  ];
+    {
+      icon: Facebook,
+      href: COMPANY_INFO.facebookUrl,
+      label: "Facebook",
+    },
+    {
+      icon: MessageCircle,
+      href:
+        settings.lineUrl && !settings.lineUrl.includes("[")
+          ? settings.lineUrl
+          : COMPANY_INFO.lineUrl,
+      label: "LINE",
+    },
+  ].filter((social) => !!social.href && !social.href.includes("["));
 
   const mapEmbedSrc =
     COMPANY_INFO.googleMapEmbed ||

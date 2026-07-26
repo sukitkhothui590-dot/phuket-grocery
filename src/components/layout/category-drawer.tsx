@@ -82,10 +82,13 @@ export function CategoryDrawer({
                           src={cat.image}
                           alt={cat.name}
                           className="h-full w-full object-contain"
+                          onError={(event) => {
+                            event.currentTarget.style.display = "none";
+                          }}
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
-                          —
+                          {cat.name.slice(0, 1)}
                         </div>
                       )}
                     </div>
@@ -124,10 +127,15 @@ export function CategoryDrawer({
                                 src={sub.image}
                                 alt={sub.name}
                                 className="h-full w-full object-contain"
+                                onError={(event) => {
+                                  event.currentTarget.style.display = "none";
+                                }}
                               />
                             </div>
                           ) : (
-                            <div className="h-8 w-8 flex-shrink-0 rounded border bg-white" />
+                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded border bg-white text-[10px] text-muted-foreground">
+                              {sub.name.slice(0, 1)}
+                            </div>
                           )}
                           <span>{sub.name}</span>
                         </Link>

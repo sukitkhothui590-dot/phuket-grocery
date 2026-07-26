@@ -29,11 +29,11 @@ export function HeroBanner({ banners }: HeroBannerProps) {
   if (banners.length === 0) return null;
 
   return (
-    <section className="relative w-full overflow-hidden">
+    <section className="relative w-full overflow-hidden bg-muted">
       {/* Aspect on the viewport-sized frame — NOT the N×100% track
           (CSS aspect-ratio uses the element's own width, so applying it
           to the wide track made the banner ~N× taller than intended). */}
-      <div className="relative w-full aspect-[3/2] sm:aspect-[2/1] md:aspect-[21/9]">
+      <div className="relative w-full aspect-[2172/724]">
         <div
           className="absolute inset-y-0 left-0 flex h-full"
           style={{

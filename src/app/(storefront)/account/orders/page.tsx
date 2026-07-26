@@ -31,19 +31,23 @@ function formatItemCount(order: Order) {
 
 export default function OrdersPage() {
   const router = useRouter();
-  const { isAuthenticated, accessToken } = useAuthStore();
+  const { isAuthenticated, hasHydrated, accessToken } = useAuthStore();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [group, setGroup] = useState<OrderStatusGroup>("all");
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login");
+    if (hasHydrated && !isAuthenticated) {
+      router.replace("/login?redirect=/account/orders");
     }
-  }, [isAuthenticated, router]);
+  }, [hasHydrated, isAuthenticated, router]);
 
   useEffect(() => {
     async function load() {
+      if (!accessToken) {
+        setLoading(false);
+        return;
+      }
       const baseOrders = await getOrders(accessToken);
       setOrders(baseOrders);
       setLoading(false);

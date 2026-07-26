@@ -28,6 +28,13 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
+function safeRedirectPath(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/";
+  }
+  return value;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -56,7 +63,11 @@ export default function LoginPage() {
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
         });
-        router.push("/");
+        const redirect =
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("redirect")
+            : null;
+        router.push(safeRedirectPath(redirect));
       } else {
         setError(result.error || "เข้าสู่ระบบไม่สำเร็จ");
       }

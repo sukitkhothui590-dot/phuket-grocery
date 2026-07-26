@@ -107,7 +107,7 @@ function fallbackProduct(
       dealId: campaign.id,
       conversionRate: 1,
       sku: unit.sku,
-      stock: 999,
+      stock: 0,
     };
   });
 

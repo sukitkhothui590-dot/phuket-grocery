@@ -50,22 +50,19 @@ export function ProductDetailClient({
 
   const baseImages =
     product.images.length > 0
-      ? product.images.map((img) =>
-          img.startsWith("http") || img.startsWith("/")
-            ? img
-            : getPlaceholderUrl(600, 600, "Product")
+      ? product.images.filter(
+          (img) =>
+            !!img &&
+            (img.startsWith("http") ||
+              img.startsWith("/") ||
+              img.startsWith("data:")),
         )
-      : [getPlaceholderUrl(600, 600, "Product")];
+      : [];
 
   const images =
-    baseImages.length >= 4
+    baseImages.length > 0
       ? baseImages
-      : [
-          ...baseImages,
-          ...Array.from({ length: 4 - baseImages.length }, (_, i) =>
-            getPlaceholderUrl(600, 600, `Product ${i + 2}`)
-          ),
-        ];
+      : [getPlaceholderUrl(600, 600, product.name)];
 
   const hasDiscount =
     selectedUnit.compareAtPrice &&
@@ -79,7 +76,11 @@ export function ProductDetailClient({
     : 0;
 
   const handleAddToCart = async () => {
-    await addToCart({
+    if (selectedUnit.stock <= 0) {
+      window.alert("สินค้าหมดสต็อก");
+      return;
+    }
+    const result = await addToCart({
       productId: product.id,
       productName: product.name,
       productImage: images[0],
@@ -95,6 +96,12 @@ export function ProductDetailClient({
         ? selectedUnit.compareAtPrice! - selectedUnit.price
         : undefined,
     });
+    if (!result.success) {
+      if (!result.error.includes("เข้าสู่ระบบ")) {
+        window.alert(result.error);
+      }
+      return;
+    }
     setAddedFeedback(true);
     setTimeout(() => setAddedFeedback(false), 1500);
     setQuantity(1);

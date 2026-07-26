@@ -56,14 +56,28 @@ export const useCartStore = create<CartState>()(
               i.productId === item.productId &&
               i.selectedUnit.sku === item.selectedUnit.sku
           );
+          const stock = item.selectedUnit.stock;
           if (existing) {
+            const nextQty =
+              stock > 0
+                ? Math.min(existing.quantity + item.quantity, stock)
+                : existing.quantity;
             return {
               items: state.items.map((i) =>
                 i.productId === item.productId &&
                 i.selectedUnit.sku === item.selectedUnit.sku
                   ? {
                       ...i,
-                      quantity: i.quantity + item.quantity,
+                      quantity: nextQty,
+                      productImage: item.productImage || i.productImage,
+                      selectedUnit: {
+                        ...i.selectedUnit,
+                        ...item.selectedUnit,
+                        stock:
+                          item.selectedUnit.stock > 0
+                            ? item.selectedUnit.stock
+                            : i.selectedUnit.stock,
+                      },
                       sourceLabel: item.sourceLabel ?? i.sourceLabel,
                       promoDiscountPercent:
                         item.promoDiscountPercent ?? i.promoDiscountPercent,
@@ -79,7 +93,10 @@ export const useCartStore = create<CartState>()(
               ),
             };
           }
-          return { items: [...state.items, item] };
+          const qty =
+            stock > 0 ? Math.min(item.quantity, stock) : Math.max(0, item.quantity);
+          if (qty <= 0) return state;
+          return { items: [...state.items, { ...item, quantity: qty }] };
         });
       },
 
@@ -97,11 +114,15 @@ export const useCartStore = create<CartState>()(
           return;
         }
         set((state) => ({
-          items: state.items.map((i) =>
-            i.productId === productId && i.selectedUnit.sku === sku
-              ? { ...i, quantity, lineTotal: undefined }
-              : i
-          ),
+          items: state.items.map((i) => {
+            if (i.productId !== productId || i.selectedUnit.sku !== sku) {
+              return i;
+            }
+            const stock = i.selectedUnit.stock;
+            const next =
+              stock > 0 ? Math.min(quantity, stock) : Math.max(1, quantity);
+            return { ...i, quantity: next, lineTotal: undefined };
+          }),
         }));
       },
 

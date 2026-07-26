@@ -12,14 +12,14 @@ import type { Order } from "@/types";
 
 export default function AccountPage() {
   const router = useRouter();
-  const { user, isAuthenticated, accessToken } = useAuthStore();
+  const { user, isAuthenticated, hasHydrated, accessToken } = useAuthStore();
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login");
+    if (hasHydrated && !isAuthenticated) {
+      router.replace("/login?redirect=/account");
     }
-  }, [isAuthenticated, router]);
+  }, [hasHydrated, isAuthenticated, router]);
 
   useEffect(() => {
     async function loadOrders() {

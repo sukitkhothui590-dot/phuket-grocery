@@ -35,7 +35,11 @@ export function ProductCard({ product, sourceLabel }: ProductCardProps) {
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    await addToCart({
+    if (displayUnit.stock <= 0) {
+      window.alert("สินค้าหมดสต็อก");
+      return;
+    }
+    const result = await addToCart({
       productId: product.id,
       productName: product.name,
       productImage: product.images[0] ?? "",
@@ -49,6 +53,12 @@ export function ProductCard({ product, sourceLabel }: ProductCardProps) {
       promoDiscountPercent: hasDiscount ? discountPercent : undefined,
       promoSavedAmount: hasDiscount ? savedAmount : undefined,
     });
+    if (!result.success) {
+      if (!result.error.includes("เข้าสู่ระบบ")) {
+        window.alert(result.error);
+      }
+      return;
+    }
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1500);
   };

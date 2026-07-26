@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from "@/lib/api/config";
 import { useAuthStore } from "@/stores/auth-store";
+import { useCartStore } from "@/stores/cart-store";
 
 let refreshPromise: Promise<string | null> | null = null;
 
@@ -42,8 +43,17 @@ export async function refreshAccessToken(): Promise<string | null> {
       const accessToken = tokens?.accessToken as string | undefined;
       const nextRefreshToken = (tokens?.refreshToken ?? refreshToken) as string;
 
-      if (!payload?.success || !accessToken) {
+      if (
+        (response.status === 401 || response.status === 403) &&
+        (!payload?.success || !accessToken)
+      ) {
         useAuthStore.getState().logout();
+        useCartStore.getState().clearCart();
+        return null;
+      }
+
+      // A temporary proxy/server failure must not destroy a valid local session.
+      if (!response.ok || !payload?.success || !accessToken) {
         return null;
       }
 
@@ -53,7 +63,7 @@ export async function refreshAccessToken(): Promise<string | null> {
       });
       return accessToken;
     } catch {
-      useAuthStore.getState().logout();
+      // Keep the session on network/JSON errors. A later request can retry.
       return null;
     } finally {
       refreshPromise = null;

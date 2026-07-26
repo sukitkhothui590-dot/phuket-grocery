@@ -58,7 +58,8 @@ function getDeliveryWindow(method: ShippingMethod) {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { user, isAuthenticated, updateUser, accessToken } = useAuthStore();
+  const { user, isAuthenticated, hasHydrated, updateUser, accessToken } =
+    useAuthStore();
   const { items, coupon, discount, getSubtotal } = useCartStore();
 
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
@@ -94,10 +95,10 @@ export default function CheckoutPage() {
   const [postalOptions, setPostalOptions] = useState<string[]>([]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login");
+    if (hasHydrated && !isAuthenticated) {
+      router.replace("/login?redirect=/checkout");
     }
-  }, [isAuthenticated, router]);
+  }, [hasHydrated, isAuthenticated, router]);
 
   useEffect(() => {
     void (async () => {
@@ -371,10 +372,30 @@ export default function CheckoutPage() {
       return;
     }
 
+    const overstock = items.find(
+      (item) =>
+        item.selectedUnit.stock > 0 && item.quantity > item.selectedUnit.stock,
+    );
+    if (overstock) {
+      alert(
+        `"${overstock.productName}" มีในสต็อกเพียง ${overstock.selectedUnit.stock} ชิ้น กรุณาปรับจำนวนในตะกร้า`,
+      );
+      return;
+    }
+
+    const missingUnit = items.find((item) => !item.selectedUnit.id);
+    if (missingUnit) {
+      alert(
+        `"${missingUnit.productName}" ไม่พร้อมสั่งซื้อ กรุณาลบแล้วเพิ่มลงตะกร้าใหม่`,
+      );
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       let paymentSlipUrl: string | undefined;
+      let transferredAt: string | undefined;
 
       if (paymentMethod === "bank_transfer" && slipFile) {
         const uploadResult = await uploadFile(slipFile, accessToken);
@@ -383,13 +404,25 @@ export default function CheckoutPage() {
           return;
         }
         paymentSlipUrl = uploadResult.url;
+
+        if (transferDate && transferTime) {
+          const iso = new Date(`${transferDate}T${transferTime}:00`);
+          if (!Number.isNaN(iso.getTime())) {
+            transferredAt = iso.toISOString();
+          }
+        }
       }
 
       await syncCartToServer(
         accessToken,
         items.map((item) => ({
           unitId: item.selectedUnit.id ?? "",
-          quantity: item.quantity,
+          quantity: Math.min(
+            item.quantity,
+            item.selectedUnit.stock > 0
+              ? item.selectedUnit.stock
+              : item.quantity,
+          ),
         })),
       );
 
@@ -398,6 +431,7 @@ export default function CheckoutPage() {
         shippingMethod,
         paymentSlipUrl,
         paymentAmount: paymentMethod === "bank_transfer" ? total : undefined,
+        transferredAt,
         transferDate:
           paymentMethod === "bank_transfer" ? transferDate : undefined,
         transferTime:

@@ -4,6 +4,7 @@ import { getPublicSettings } from "@/lib/api/settings";
 import { COMPANY_INFO } from "@/lib/constants";
 import { googleReviews as mockGoogleReviews } from "@/lib/mock-data/content";
 import { decodeRouteParam } from "@/lib/route-params";
+import { resolveStoreLink } from "@/lib/store-links";
 import type { Banner, BlogPost, FAQ, GoogleReview, PromotionCard } from "@/types";
 
 const PROMO_STYLES = [
@@ -48,7 +49,7 @@ export async function getPromotionCards(): Promise<PromotionCard[]> {
           ? `จัดส่งรวดเร็ว สั่งครบ ${Number(threshold).toLocaleString()} ส่งฟรี`
           : banner.subtitle ?? "ช้อปสินค้าคุณภาพ ราคาส่ง",
       image: banner.image,
-      link: banner.link ?? "/categories",
+      link: resolveStoreLink(banner.link),
       bgClass: PROMO_STYLES[index]?.bgClass ?? "bg-primary",
       textClass: PROMO_STYLES[index]?.textClass ?? "text-white",
     }));
@@ -86,30 +87,52 @@ export async function getPromotionCards(): Promise<PromotionCard[]> {
 }
 
 export async function getBlogPosts(limit?: number): Promise<BlogPost[]> {
-  const response = await apiGet<
-    Array<{
-      id: string;
-      title: string;
-      slug: string;
-      excerpt?: string | null;
-      content: string;
-      author?: string | null;
-      featuredImage?: string | null;
-      publishedAt?: string | null;
-      createdAt: string;
-    }>
-  >("/public/blogs", {
-    searchParams: {
-      limit: limit ?? 20,
-      page: 1,
-    },
-  });
+  type BackendBlogItem = {
+    id: string;
+    title: string;
+    slug: string;
+    excerpt?: string | null;
+    content: string;
+    author?: string | null;
+    featuredImage?: string | null;
+    publishedAt?: string | null;
+    createdAt: string;
+  };
 
-  if (!response.success) {
-    return [];
+  // Storefront blog index must load every published post, not a truncated first page.
+  const pageSize = limit ? Math.min(limit, 100) : 100;
+  const collected: BackendBlogItem[] = [];
+  let page = 1;
+  let total = Number.POSITIVE_INFINITY;
+
+  while (collected.length < total) {
+    const response = await apiGet<BackendBlogItem[]>("/public/blogs", {
+      searchParams: {
+        limit: pageSize,
+        page,
+      },
+    });
+
+    if (!response.success) {
+      break;
+    }
+
+    collected.push(...response.data);
+    total = response.meta?.total ?? collected.length;
+    const totalPages = response.meta?.totalPages ?? page;
+
+    if (
+      response.data.length === 0 ||
+      page >= totalPages ||
+      (limit != null && collected.length >= limit)
+    ) {
+      break;
+    }
+
+    page += 1;
   }
 
-  const posts = response.data.map(mapBlog);
+  const posts = collected.map(mapBlog);
   return limit ? posts.slice(0, limit) : posts;
 }
 

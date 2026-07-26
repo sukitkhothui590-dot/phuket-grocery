@@ -28,7 +28,7 @@ export default async function HomePage() {
   ] = await Promise.all([
       getBanners(),
       getCategories(),
-      getFeaturedProducts(),
+      getFeaturedProducts(10),
       getPromoProducts(),
       getGoogleReviews(),
       getBlogPosts(3),
@@ -46,7 +46,11 @@ export default async function HomePage() {
       <HomePromoCarousel products={promoProducts} />
       <HomeCampaigns campaigns={campaignData.campaigns} />
       <PromotionGrid />
-      <FeaturedProducts title="สินค้าแนะนำ" products={featuredProducts} />
+      <FeaturedProducts
+        title="สินค้าแนะนำ"
+        products={featuredProducts}
+        viewAllLink="/featured"
+      />
 
       {showcaseCategories.map((cat, idx) => (
         <CategoryProductSection

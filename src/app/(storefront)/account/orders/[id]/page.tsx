@@ -51,7 +51,7 @@ function formatAddress(order: Order) {
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { isAuthenticated, accessToken } = useAuthStore();
+  const { isAuthenticated, hasHydrated, accessToken } = useAuthStore();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
@@ -61,10 +61,12 @@ export default function OrderDetailPage() {
   const [transferTime, setTransferTime] = useState("");
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login");
+    if (hasHydrated && !isAuthenticated) {
+      router.replace(
+        `/login?redirect=${encodeURIComponent(`/account/orders/${id}`)}`,
+      );
     }
-  }, [isAuthenticated, router]);
+  }, [hasHydrated, id, isAuthenticated, router]);
 
   useEffect(() => {
     void (async () => {

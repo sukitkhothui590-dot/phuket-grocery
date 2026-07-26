@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getBlogPosts } from "@/lib/api/content";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "บทความ",
   description: "บทความ ข่าวสาร และเคล็ดลับจากภูเก็ต โกรเซอรี่",
@@ -17,6 +20,7 @@ export default async function BlogPage() {
       </h1>
       <p className="mt-2 text-center text-gray-500">
         อัปเดตข่าวสาร โปรโมชั่น และเคล็ดลับดีๆ
+        {posts.length > 0 ? ` · ทั้งหมด ${posts.length} บทความ` : ""}
       </p>
 
       <div className="mt-10 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">

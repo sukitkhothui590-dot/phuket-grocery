@@ -50,8 +50,14 @@ export async function getStoreSettings(): Promise<{
     storeAddress: settings.store_address || COMPANY_INFO.address,
     workingHours: settings.working_hours || COMPANY_INFO.workingHours,
     lineId: settings.line_id || COMPANY_INFO.line,
-    lineUrl: settings.line_url || COMPANY_INFO.lineUrl,
-    facebookUrl: settings.facebook_url || COMPANY_INFO.facebookUrl,
+    lineUrl:
+      settings.line_url && !settings.line_url.includes("[")
+        ? settings.line_url
+        : COMPANY_INFO.lineUrl,
+    facebookUrl:
+      settings.facebook_url && !settings.facebook_url.includes("[")
+        ? settings.facebook_url
+        : COMPANY_INFO.facebookUrl,
     freeShippingThreshold: Number(
       settings.free_shipping_threshold ?? 1500,
     ),

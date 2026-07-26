@@ -1,5 +1,5 @@
 import { getApiBaseUrl } from "./config";
-import { refreshAccessToken } from "./token";
+import { getAccessToken, refreshAccessToken } from "./token";
 
 export interface ApiSuccess<T> {
   success: true;
@@ -98,7 +98,12 @@ export async function apiRequest<T>(
     options.token &&
     !path.startsWith("/auth/")
   ) {
-    const newToken = await refreshAccessToken();
+    // Another concurrent request may already have refreshed the token.
+    const currentToken = getAccessToken();
+    const newToken =
+      currentToken && currentToken !== options.token
+        ? currentToken
+        : await refreshAccessToken();
     if (newToken) {
       ({ response, payload } = await executeRequest<T>(path, {
         ...options,

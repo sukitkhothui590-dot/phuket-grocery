@@ -24,6 +24,30 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/promotions",
+        destination: "/deals",
+        permanent: false,
+      },
+      {
+        source: "/promotions/:path*",
+        destination: "/deals",
+        permanent: false,
+      },
+      {
+        source: "/products/new-arrivals",
+        destination: "/featured",
+        permanent: false,
+      },
+      {
+        source: "/products/eco-packaging",
+        destination: "/categories",
+        permanent: false,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {
@@ -31,7 +55,6 @@ const nextConfig: NextConfig = {
         destination: `${apiProxyTarget}/backend/:path*`,
       },
       // Backend stores media as path-only `/uploads/...` (served outside /backend).
-      // Proxy so browser requests to the storefront origin still load files.
       {
         source: "/uploads/:path*",
         destination: `${apiProxyTarget}/uploads/:path*`,

@@ -1,5 +1,6 @@
-import { resolveMediaUrl, resolveMediaUrls } from "@/lib/api/media";
+﻿import { resolveMediaUrl, resolveMediaUrls } from "@/lib/api/media";
 import { getPlaceholderUrl } from "@/lib/placeholder";
+import { resolveStoreLink } from "@/lib/store-links";
 import type {
   Address,
   Banner,
@@ -227,9 +228,23 @@ export function mapProductUnit(unit: BackendProductUnit): ProductUnit {
     conversionRate: unit.conversionRate ?? unit.conversionToBase,
     sku: unit.sku,
     stock:
-      unit.stock ??
-      (unit.stockStatus === "OUT_OF_STOCK" ? 0 : 999),
+      typeof unit.stock === "number"
+        ? Math.max(0, unit.stock)
+        : unit.stockStatus === "OUT_OF_STOCK"
+          ? 0
+          : -1,
   };
+}
+
+function resolveCategoryImage(
+  icon: string | null | undefined,
+  name: string,
+): string {
+  if (icon && (/^https?:\/\//i.test(icon) || icon.startsWith("/"))) {
+    return resolveMediaUrl(icon);
+  }
+  // Backend often sends Material icon names (e.g. local_drink), not image URLs.
+  return getPlaceholderUrl(120, 120, name.slice(0, 12));
 }
 
 export function mapProduct(product: BackendProduct): Product {
@@ -238,6 +253,7 @@ export function mapProduct(product: BackendProduct): Product {
   const isNew =
     product.isNew ??
     Date.now() - createdAt.getTime() < 1000 * 60 * 60 * 24 * 30;
+  const availableStock = product.stock?.available;
 
   const rawImages =
     product.images && product.images.length > 0
@@ -261,9 +277,18 @@ export function mapProduct(product: BackendProduct): Product {
     // Treat missing isActive as active so deal-priced units always render.
     units: product.units
       .filter((unit) => unit.isActive !== false)
-      .map(mapProductUnit),
+      .map((unit) => {
+        const mapped = mapProductUnit(unit);
+        if (mapped.stock < 0 && typeof availableStock === "number") {
+          mapped.stock = Math.max(0, availableStock);
+        }
+        if (mapped.stock < 0) {
+          mapped.stock = 0;
+        }
+        return mapped;
+      }),
     baseUnit: baseUnit ? mapUnitType(baseUnit) : "piece",
-    baseStock: product.stock?.available ?? 0,
+    baseStock: availableStock ?? 0,
     isFeatured: product.isFeatured ?? false,
     isNew,
     activeDeal: product.activeDeal
@@ -289,7 +314,7 @@ export function mapCategories(items: BackendCategory[]): Category[] {
     name: item.name,
     slug: item.slug,
     parentId: item.parentId ?? "",
-    image: item.icon ? resolveMediaUrl(item.icon) : undefined,
+    image: resolveCategoryImage(item.icon, item.name),
   });
 
   return roots.map((root) => {
@@ -307,9 +332,7 @@ export function mapCategories(items: BackendCategory[]): Category[] {
       id: root.id,
       name: root.name,
       slug: root.slug,
-      image: root.icon
-        ? resolveMediaUrl(root.icon)
-        : getPlaceholderUrl(120, 120, root.name),
+      image: resolveCategoryImage(root.icon, root.name),
       // API often leaves parent productCount at 0 while children hold inventory.
       productCount: ownCount > 0 ? ownCount : childCount,
       subcategories: subcategories.map(toSubcategory),
@@ -322,7 +345,7 @@ export function mapBanner(banner: BackendBanner): Banner {
     id: banner.id,
     title: banner.title,
     image: resolveMediaUrl(banner.imageUrl),
-    link: banner.link ?? undefined,
+    link: resolveStoreLink(banner.link),
     order: banner.order,
   };
 }
@@ -338,7 +361,7 @@ export function mapBlog(blog: BackendBlog): BlogPost {
       ? resolveMediaUrl(blog.featuredImage)
       : getPlaceholderUrl(800, 400, blog.title),
     publishedAt: blog.publishedAt ?? blog.createdAt,
-    author: blog.author ?? "ภูเก็ตโกรเซอรี่",
+    author: blog.author ?? "α╕áα╕╣α╣Çα╕üα╣çα╕òα╣éα╕üα╕úα╣Çα╕ïα╕¡α╕úα╕╡α╣ê",
   };
 }
 
@@ -354,7 +377,7 @@ export function mapFaq(faq: BackendFaq): FAQ {
 export function mapAddress(address: BackendAddress): Address {
   return {
     id: address.id,
-    label: address.label || "ที่อยู่",
+    label: address.label || "α╕ùα╕╡α╣êα╕¡α╕óα╕╣α╣ê",
     fullName: address.recipientName,
     phone: address.phone,
     addressLine1: address.addressLine,
@@ -367,7 +390,7 @@ export function mapAddress(address: BackendAddress): Address {
 }
 
 export function mapUser(user: BackendUser): User {
-  const [firstName, ...rest] = (user.name || "ลูกค้า").trim().split(/\s+/);
+  const [firstName, ...rest] = (user.name || "α╕Ñα╕╣α╕üα╕äα╣ëα╕▓").trim().split(/\s+/);
 
   return {
     id: user.id,
@@ -413,7 +436,7 @@ function mapShippingMethod(value?: string): Order["shippingMethod"] {
 }
 
 function mapOrderItem(item: BackendOrderItem): OrderItem {
-  const productName = item.productName ?? item.name ?? "สินค้า";
+  const productName = item.productName ?? item.name ?? "α╕¬α╕┤α╕Öα╕äα╣ëα╕▓";
   const unitPrice = item.unitPrice ?? item.selectedUnit?.price ?? 0;
   const unitId = item.selectedUnit?.id ?? item.productUnitId ?? item.productId;
 
@@ -427,7 +450,7 @@ function mapOrderItem(item: BackendOrderItem): OrderItem {
     selectedUnit: item.selectedUnit ?? {
       id: unitId,
       unitType: "piece",
-      labelTh: item.unitName ?? "ชิ้น",
+      labelTh: item.unitName ?? "α╕èα╕┤α╣ëα╕Ö",
       labelEn: item.unitName ?? "piece",
       price: unitPrice,
       conversionRate: 1,
@@ -469,7 +492,7 @@ export function mapOrder(order: BackendOrder): Order {
     slipUploadedAt: order.slipUploadedAt ?? undefined,
     shippingAddress: {
       id: `addr-${order.id}`,
-      label: "จัดส่ง",
+      label: "α╕êα╕▒α╕öα╕¬α╣êα╕ç",
       fullName: shipping?.recipientName ?? order.recipientName ?? "",
       phone: shipping?.phone ?? order.phone ?? "",
       addressLine1: shipping?.addressLine ?? order.addressLine ?? "",

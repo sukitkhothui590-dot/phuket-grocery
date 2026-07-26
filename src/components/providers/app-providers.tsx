@@ -8,12 +8,13 @@ import { useAuthStore } from "@/stores/auth-store";
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const accessToken = useAuthStore((state) => state.accessToken);
+  const hasHydrated = useAuthStore((state) => state.hasHydrated);
 
   useEffect(() => {
-    if (isAuthenticated && accessToken) {
+    if (hasHydrated && isAuthenticated && accessToken) {
       void Promise.all([loadCartFromServer(), syncUserAddresses()]);
     }
-  }, [isAuthenticated, accessToken]);
+  }, [hasHydrated, isAuthenticated, accessToken]);
 
   return children;
 }

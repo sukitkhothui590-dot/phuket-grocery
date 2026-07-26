@@ -275,6 +275,14 @@ export default function CartPage() {
                         }
                         alt={item.productName}
                         className="h-full w-full object-cover"
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = getPlaceholderUrl(
+                            96,
+                            96,
+                            item.productName,
+                          );
+                        }}
                       />
                     </div>
 
@@ -385,9 +393,17 @@ export default function CartPage() {
                         </p>
                       )}
 
-                      <p className="mt-2 text-xs text-[#ee4d2d]">
-                        เหลือสินค้าอยู่ {item.selectedUnit.stock} ชิ้น
-                      </p>
+                      {item.selectedUnit.stock > 0 &&
+                        item.selectedUnit.stock < 500 && (
+                        <p className="mt-2 text-xs text-[#ee4d2d]">
+                          เหลือสินค้าอยู่ {item.selectedUnit.stock} ชิ้น
+                        </p>
+                      )}
+                      {item.selectedUnit.stock <= 0 && (
+                        <p className="mt-2 text-xs text-[#ee4d2d]">
+                          สินค้าหมดสต็อก
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -428,6 +444,11 @@ export default function CartPage() {
                       <input
                         type="number"
                         min={1}
+                        max={
+                          item.selectedUnit.stock > 0
+                            ? item.selectedUnit.stock
+                            : undefined
+                        }
                         value={item.quantity}
                         onChange={(e) =>
                           void setCartQuantity(
@@ -435,6 +456,7 @@ export default function CartPage() {
                             item.selectedUnit.sku,
                             Number(e.target.value) || 1,
                             item.selectedUnit.id,
+                            item.selectedUnit.stock,
                           )
                         }
                         className="h-9 w-12 border-y border-slate-300 text-center text-sm outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
@@ -447,9 +469,14 @@ export default function CartPage() {
                             item.selectedUnit.sku,
                             item.quantity + 1,
                             item.selectedUnit.id,
+                            item.selectedUnit.stock,
                           )
                         }
-                        className="flex h-9 w-9 items-center justify-center border border-slate-300 text-slate-600 transition-colors hover:bg-slate-50"
+                        disabled={
+                          item.selectedUnit.stock > 0 &&
+                          item.quantity >= item.selectedUnit.stock
+                        }
+                        className="flex h-9 w-9 items-center justify-center border border-slate-300 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         <Plus className="h-4 w-4" />
                       </button>

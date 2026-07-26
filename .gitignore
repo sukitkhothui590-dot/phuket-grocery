@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# local payment slip uploads (checkout fallback)
+/public/slips/
+.tmp-*
+.codex-*
+.next-dev.*

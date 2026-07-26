@@ -17,7 +17,7 @@ const PAGE_SIZE = 10;
 export function FeaturedProducts({
   title,
   products,
-  viewAllLink = "/categories",
+  viewAllLink = "/featured",
 }: FeaturedProductsProps) {
   const [page, setPage] = useState(0);
   const totalPages = Math.ceil(products.length / PAGE_SIZE);

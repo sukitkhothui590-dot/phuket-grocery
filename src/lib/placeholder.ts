@@ -17,7 +17,7 @@ export function getPlaceholderUrl(
  *
  * | Placement               | Width | Height | Ratio  | Notes                          |
  * |-------------------------|-------|--------|--------|--------------------------------|
- * | Hero Banner             | 1200  | 460    | ~2.6:1 | Full-width, responsive         |
+ * | Hero Banner             | 2172  | 724    | ~3:1   | Full-width, responsive         |
  * | Category Grid (Home)    | 300   | 300    | 1:1    | Square thumbnail               |
  * | Category Page Card      | 400   | 300    | 4:3    | Category listing card          |
  * | Product Card            | 300   | 300    | 1:1    | Square, used in grids          |
@@ -32,7 +32,7 @@ export function getPlaceholderUrl(
  * | Logo                    | 200   | 60     | ~3:1   | Site logo                      |
  */
 export const IMAGE_SIZES = {
-  heroBanner: { width: 1200, height: 460, label: "Banner 1200x460" },
+  heroBanner: { width: 2172, height: 724, label: "Banner 2172x724" },
   categoryGridHome: { width: 300, height: 300, label: "Category 300x300" },
   categoryCard: { width: 400, height: 300, label: "Category 400x300" },
   productCard: { width: 300, height: 300, label: "Product 300x300" },
