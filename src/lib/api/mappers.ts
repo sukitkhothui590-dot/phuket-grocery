@@ -24,6 +24,7 @@ interface BackendCategory {
   slug: string;
   parentId: string | null;
   icon: string | null;
+  image?: string | null;
   sortOrder?: number;
   isActive?: boolean;
   productCount?: number;
@@ -236,15 +237,15 @@ export function mapProductUnit(unit: BackendProductUnit): ProductUnit {
   };
 }
 
-function resolveCategoryImage(
-  icon: string | null | undefined,
-  name: string,
-): string {
-  if (icon && (/^https?:\/\//i.test(icon) || icon.startsWith("/"))) {
-    return resolveMediaUrl(icon);
+function resolveCategoryImage(item: BackendCategory): string {
+  // Admins upload a picture into `image`; `icon` only ever holds a Material
+  // Symbols name (e.g. local_drink). Reading `icon` alone means an uploaded
+  // category photo silently renders as a placeholder forever.
+  const src = item.image ?? item.icon;
+  if (src && (/^https?:\/\//i.test(src) || src.startsWith("/"))) {
+    return resolveMediaUrl(src);
   }
-  // Backend often sends Material icon names (e.g. local_drink), not image URLs.
-  return getPlaceholderUrl(120, 120, name.slice(0, 12));
+  return getPlaceholderUrl(120, 120, item.name.slice(0, 12));
 }
 
 export function mapProduct(product: BackendProduct): Product {
@@ -314,7 +315,7 @@ export function mapCategories(items: BackendCategory[]): Category[] {
     name: item.name,
     slug: item.slug,
     parentId: item.parentId ?? "",
-    image: resolveCategoryImage(item.icon, item.name),
+    image: resolveCategoryImage(item),
   });
 
   return roots.map((root) => {
@@ -332,7 +333,7 @@ export function mapCategories(items: BackendCategory[]): Category[] {
       id: root.id,
       name: root.name,
       slug: root.slug,
-      image: resolveCategoryImage(root.icon, root.name),
+      image: resolveCategoryImage(root),
       // API often leaves parent productCount at 0 while children hold inventory.
       productCount: ownCount > 0 ? ownCount : childCount,
       subcategories: subcategories.map(toSubcategory),
