@@ -36,6 +36,16 @@ export default function AboutPage() {
       </h1>
       <p className="mt-2 text-center text-gray-500">{COMPANY_INFO.shortName}</p>
 
+      <section className="mt-10 overflow-hidden rounded-xl border border-gray-200 bg-white">
+        <div className="relative aspect-[16/9] w-full bg-gray-100 sm:aspect-[21/9]">
+          <img
+            src="/about/storefront.jpg"
+            alt={`${COMPANY_INFO.shortName}`}
+            className="h-full w-full object-cover object-center"
+          />
+        </div>
+      </section>
+
       <section className="mt-10 rounded-xl bg-primary/5 p-6 sm:p-8">
         <h2 className="text-xl font-semibold text-primary">
           แหล่งรวมสินค้าครบวงจร ตอบโจทย์ทุกความต้องการของครัวเรือนและผู้ประกอบการ
