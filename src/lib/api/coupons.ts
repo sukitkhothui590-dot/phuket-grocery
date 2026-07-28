@@ -164,20 +164,16 @@ export async function getAvailableCoupons(params?: {
 }
 
 export async function claimCoupon(
-  couponId: string,
-  token: string,
+  _couponId: string,
+  _token: string,
 ): Promise<{ success: boolean; coupon?: SavedCoupon; error?: string }> {
-  const response = await apiPost<BackendCouponBase>(
-    `/coupons/${couponId}/claim`,
-    {},
-    { token },
-  );
-
-  if (!response.success) {
-    return { success: false, error: response.error.message };
-  }
-
-  return { success: true, coupon: mapSavedCoupon(response.data) };
+  // Backend removed claim-wallet (CreateCouponDto marks claim* as ignored).
+  // Storefront uses GET /coupons/available + validate/for-cart + checkout couponCode.
+  return {
+    success: false,
+    error:
+      "ระบบเก็บคูปองเข้ากระเป๋าถูกปิดจากหลังบ้านแล้ว ใช้โค้ดจากหน้ารายการคูปองตอนชำระเงินได้เลย",
+  };
 }
 
 export async function getMyCoupons(params: {

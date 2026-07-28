@@ -33,7 +33,6 @@ import { clearCartEverywhere } from "@/lib/cart-actions";
 import {
   COMPANY_INFO,
 } from "@/lib/constants";
-import { useCouponWalletStore } from "@/stores/coupon-wallet-store";
 import type { Address, PaymentMethod, ShippingMethod } from "@/types";
 
 type RegionStep = "province" | "district" | "subdistrict" | "postal";
@@ -451,10 +450,6 @@ export default function CheckoutPage() {
       if (!result.success || !result.order) {
         alert(result.error ?? "ไม่สามารถสร้างคำสั่งซื้อได้");
         return;
-      }
-
-      if (user?.id && coupon?.code) {
-        useCouponWalletStore.getState().markUsed(user.id, coupon.code);
       }
 
       await clearCartEverywhere();

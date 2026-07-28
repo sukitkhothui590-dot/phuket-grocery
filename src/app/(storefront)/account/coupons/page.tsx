@@ -5,20 +5,35 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TicketPercent } from "lucide-react";
 import { CouponVoucherCard } from "@/components/coupon/coupon-voucher-card";
-import { getAvailableCoupons } from "@/lib/api/coupons";
-import type { ClaimableCoupon } from "@/types";
+import { getAvailableCoupons, getMyCoupons } from "@/lib/api/coupons";
+import { useAuthStore } from "@/stores/auth-store";
+import type { ClaimableCoupon, SavedCoupon } from "@/types";
 
 export default function MyCouponsPage() {
   const router = useRouter();
+  const accessToken = useAuthStore((state) => state.accessToken);
   const [coupons, setCoupons] = useState<ClaimableCoupon[]>([]);
+  const [history, setHistory] = useState<SavedCoupon[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const result = await getAvailableCoupons();
-    setCoupons(result.coupons);
+    const available = await getAvailableCoupons();
+    setCoupons(available.coupons);
+
+    if (accessToken) {
+      const mine = await getMyCoupons({
+        token: accessToken,
+        status: "USED",
+        limit: 20,
+      });
+      setHistory(mine.coupons);
+    } else {
+      setHistory([]);
+    }
+
     setLoading(false);
-  }, []);
+  }, [accessToken]);
 
   useEffect(() => {
     void load();
@@ -34,7 +49,7 @@ export default function MyCouponsPage() {
           <div>
             <h1 className="text-xl font-bold text-foreground">คูปองพร้อมใช้</h1>
             <p className="text-xs text-muted-foreground">
-              คูปองที่ร้านเพิ่มให้จะแสดงที่นี่อัตโนมัติ ไม่ต้องเก็บเอง
+              คูปองจากร้านแสดงที่นี่อัตโนมัติ เลือกใช้ตอนชำระเงินได้เลย
             </p>
           </div>
         </div>
@@ -69,7 +84,9 @@ export default function MyCouponsPage() {
                 coupon={coupon}
                 detailed
                 actionLabel="ใช้ที่ตะกร้า"
-                onAction={() => router.push("/cart")}
+                onAction={() =>
+                  router.push(`/cart?coupon=${encodeURIComponent(coupon.code)}`)
+                }
               />
             ))}
           </div>
@@ -80,6 +97,25 @@ export default function MyCouponsPage() {
             ไปตะกร้าเพื่อใช้คูปอง →
           </Link>
         </>
+      )}
+
+      {history.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-base font-semibold text-foreground">
+            ประวัติคูปองที่ใช้แล้ว
+          </h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {history.map((coupon) => (
+              <CouponVoucherCard
+                key={coupon.id}
+                coupon={coupon}
+                detailed
+                claimed
+                disabled
+              />
+            ))}
+          </div>
+        </section>
       )}
     </main>
   );

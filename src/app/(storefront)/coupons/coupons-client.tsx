@@ -107,7 +107,9 @@ export default function CouponsPageClient() {
               coupon={coupon}
               detailed
               actionLabel="ใช้ที่ตะกร้า"
-              onAction={() => router.push("/cart")}
+              onAction={() =>
+                router.push(`/cart?coupon=${encodeURIComponent(coupon.code)}`)
+              }
             />
           ))}
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Minus, Plus, ShoppingBag, Store, Tag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ export default function CartPage() {
     removeCoupon,
   } = useCartStore();
   const accessToken = useAuthStore((state) => state.accessToken);
+  const pendingCouponRef = useRef<string | null>(null);
 
   const [couponError, setCouponError] = useState("");
   const [couponLoading, setCouponLoading] = useState(false);
@@ -52,6 +53,13 @@ export default function CartPage() {
       return filtered.length > 0 ? filtered : nextKeys;
     });
   }, [items]);
+
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("coupon")?.trim();
+    if (code) {
+      pendingCouponRef.current = code.toUpperCase();
+    }
+  }, []);
 
   useEffect(() => {
     async function loadProducts() {
@@ -158,12 +166,27 @@ export default function CartPage() {
       applyCoupon(result.coupon, subtotal, result.discount);
       setCouponPickerOpen(false);
       setCouponError("");
+      pendingCouponRef.current = null;
     } else {
       setCouponError(result.error ?? "โค้ดส่วนลดไม่ถูกต้อง");
     }
 
     setCouponLoading(false);
   };
+
+  useEffect(() => {
+    const pending = pendingCouponRef.current;
+    if (!pending || couponLoading) return;
+    if (coupon?.code?.toUpperCase() === pending) {
+      pendingCouponRef.current = null;
+      return;
+    }
+    if (selectedItems.length === 0) return;
+
+    pendingCouponRef.current = null;
+    void handleApplyCoupon(pending);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- apply once when cart/selection ready
+  }, [selectedKeys, items, coupon?.code, couponLoading]);
 
   if (items.length === 0) {
     return (

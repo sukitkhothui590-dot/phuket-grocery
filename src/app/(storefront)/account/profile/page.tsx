@@ -174,13 +174,6 @@ export default function ProfilePage() {
   const handleProfileSubmit = async (data: ProfileFormData) => {
     if (!accessToken) return;
 
-    const changingEmail =
-      data.email.trim().toLowerCase() !== (user.email || "").trim().toLowerCase();
-    if (changingEmail && !emailVerified) {
-      setProfileError("กรุณายืนยันอีเมลใหม่ก่อนบันทึกข้อมูล");
-      return;
-    }
-
     setProfileLoading(true);
     setProfileError("");
 
@@ -369,21 +362,22 @@ export default function ProfilePage() {
                     {profileForm.formState.errors.email.message}
                   </p>
                 )}
-                <div className="rounded-md border border-dashed border-primary/30 bg-primary/5 p-3">
+                <div className="rounded-md border border-dashed border-amber-300 bg-amber-50 p-3">
                   <p className="text-xs font-medium text-foreground">
                     ยืนยันอีเมล
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
+                    ตอนนี้บันทึกอีเมลใหม่ผ่านโปรไฟล์ได้เลย
                     {emailChanged
-                      ? "คุณเปลี่ยนอีเมลแล้ว กรุณายืนยันอีเมลใหม่ก่อนบันทึก"
-                      : "แนะนำให้ยืนยันอีเมลเพื่อความปลอดภัยของบัญชี"}
+                      ? " (รอหลังบ้านเปิดระบบส่งรหัสยืนยัน)"
+                      : " — ระบบส่งรหัสยืนยันอีเมลยังไม่พร้อมจากหลังบ้าน"}
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      disabled={emailVerifyLoading || !watchedEmail}
+                      disabled={emailVerifyLoading || !watchedEmail || !emailChanged}
                       onClick={() => void handleSendEmailCode()}
                     >
                       {emailVerifyLoading ? "กำลังส่ง..." : "ส่งรหัสยืนยัน"}

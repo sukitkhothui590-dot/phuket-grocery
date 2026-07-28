@@ -1,10 +1,8 @@
 import type { ClaimableCoupon, CouponCategory } from "@/types";
 
 /**
- * Claimable voucher catalog aligned with live backend coupon codes.
- * Until backend exposes GET /coupons/available + claim APIs,
- * Fallback / display helpers for coupon categories.
- * Live coupons come from GET /coupons/available.
+ * Coupon category helpers + offline catalog fallback.
+ * Live coupons come from GET /coupons/available (claim wallet removed on backend).
  */
 export const CLAIMABLE_COUPON_CATALOG: ClaimableCoupon[] = [
   {

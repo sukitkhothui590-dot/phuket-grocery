@@ -1,5 +1,10 @@
 # Backend Spec (ฉบับละเอียด) — ระบบคูปองแบบเก็บเข้ากระเป๋า + ค่าใช้จ่าย
 
+> **อัปเดต 2026-07-28:** ตรวจจาก Swagger แล้ว Backend ระบุว่า **claim wallet removed**
+> (`isClaimable` / `claim*` = ignored) และไม่มี `POST /coupons/{id}/claim`
+> Frontend ปรับเป็นโหมดใช้โค้ดแล้ว — ดูสถานะช่องว่างที่ `docs/backend-api-gaps.md`
+> เอกสารด้านล่างยังเก็บไว้เป็นสเปกเดิม หากต้องการเปิด claim กลับ
+
 | รายการ | รายละเอียด |
 |--------|------------|
 | โปรเจกต์ | Phuket Grocery |
@@ -8,7 +13,7 @@
 | Base URL | `http://<host>:8080/backend` |
 | Auth | Bearer JWT (`CUSTOMER` / `ADMIN`) |
 | รูปแบบ response | `{ "success": true/false, "data": ..., "error"?: { "code", "message" }, "meta"?: {...} }` |
-| สถานะ Frontend | UI พร้อมแล้ว (ใช้ localStorage ชั่วคราว) — รอ API จริง |
+| สถานะ Frontend | ปรับเป็นโค้ดคูปองแล้ว (available / validate / for-cart / checkout) |
 
 ---
 
