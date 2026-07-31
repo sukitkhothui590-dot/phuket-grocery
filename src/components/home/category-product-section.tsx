@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductCard } from "@/components/product/product-card";
@@ -16,20 +16,43 @@ export function CategoryProductSection({
   products,
 }: CategoryProductSectionProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd, setAtEnd] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
 
-  const handleScroll = () => {
+  const updateScrollState = () => {
     const el = scrollRef.current;
     if (!el) return;
-    setAtStart(el.scrollLeft <= 2);
-    setAtEnd(el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(maxScroll > 2 && el.scrollLeft < maxScroll - 2);
   };
+
+  useEffect(() => {
+    updateScrollState();
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const onScroll = () => updateScrollState();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", updateScrollState);
+
+    const observer = new ResizeObserver(() => updateScrollState());
+    observer.observe(el);
+
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", updateScrollState);
+      observer.disconnect();
+    };
+  }, [products.length]);
 
   const scroll = (dir: "left" | "right") => {
     const el = scrollRef.current;
     if (!el) return;
-    const amount = el.clientWidth * 0.8;
+    const card = el.firstElementChild as HTMLElement | null;
+    const amount = card
+      ? (card.offsetWidth + 20) * 2
+      : el.clientWidth * 0.8;
     el.scrollBy({
       left: dir === "left" ? -amount : amount,
       behavior: "smooth",
@@ -37,8 +60,6 @@ export function CategoryProductSection({
   };
 
   if (products.length === 0) return null;
-
-  const hasOverflow = products.length > 5;
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-4">
@@ -72,19 +93,19 @@ export function CategoryProductSection({
         </div>
 
         {/* Product scroll area */}
-        <div className="relative flex-1 overflow-hidden bg-white p-4">
-          {hasOverflow && !atStart && (
-            <button
-              onClick={() => scroll("left")}
-              className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-white shadow-md transition-colors hover:bg-muted"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          )}
+        <div className="relative min-w-0 flex-1 overflow-hidden bg-white p-4">
+          <button
+            type="button"
+            onClick={() => scroll("left")}
+            disabled={!canScrollLeft}
+            aria-label="ย้อนกลับ"
+            className="absolute left-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-white shadow-md transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-0"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
 
           <div
             ref={scrollRef}
-            onScroll={handleScroll}
             className="scrollbar-hide flex gap-5 overflow-x-auto scroll-smooth"
           >
             {products.map((product) => (
@@ -97,14 +118,15 @@ export function CategoryProductSection({
             ))}
           </div>
 
-          {hasOverflow && !atEnd && (
-            <button
-              onClick={() => scroll("right")}
-              className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-white shadow-md transition-colors hover:bg-muted"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => scroll("right")}
+            disabled={!canScrollRight}
+            aria-label="ถัดไป"
+            className="absolute right-2 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border bg-white shadow-md transition-colors hover:bg-muted disabled:pointer-events-none disabled:opacity-0"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </section>

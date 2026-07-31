@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Minus,
@@ -22,6 +22,11 @@ import { UnitSelector } from "@/components/product/unit-selector";
 import { ProductCard } from "@/components/product/product-card";
 import { ProductReviews } from "@/components/product/product-reviews";
 import { addToCart } from "@/lib/cart-actions";
+import {
+  isHtmlContent,
+  sanitizeProductHtml,
+  stripHtml,
+} from "@/lib/html";
 import { getPlaceholderUrl } from "@/lib/placeholder";
 import type { Product, ProductUnit } from "@/types";
 
@@ -47,6 +52,9 @@ export function ProductDetailClient({
   const [activeTab, setActiveTab] = useState<"desc" | "info" | "review">(
     "desc"
   );
+  const [canScrollThumbLeft, setCanScrollThumbLeft] = useState(false);
+  const [canScrollThumbRight, setCanScrollThumbRight] = useState(false);
+  const thumbStripRef = useRef<HTMLDivElement>(null);
 
   const baseImages =
     product.images.length > 0
@@ -118,6 +126,53 @@ export function ProductDetailClient({
   const nextImage = () =>
     setMainImageIdx((i) => (i + 1) % images.length);
 
+  const updateThumbScrollState = () => {
+    const el = thumbStripRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setCanScrollThumbLeft(el.scrollLeft > 2);
+    setCanScrollThumbRight(maxScroll > 2 && el.scrollLeft < maxScroll - 2);
+  };
+
+  const scrollThumbs = (direction: "left" | "right") => {
+    const el = thumbStripRef.current;
+    if (!el) return;
+    const amount = Math.max(el.clientWidth * 0.75, 160);
+    el.scrollBy({
+      left: direction === "left" ? -amount : amount,
+      behavior: "smooth",
+    });
+  };
+
+  useEffect(() => {
+    updateThumbScrollState();
+    const el = thumbStripRef.current;
+    if (!el) return;
+
+    const onScroll = () => updateThumbScrollState();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", updateThumbScrollState);
+
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", updateThumbScrollState);
+    };
+  }, [images.length]);
+
+  useEffect(() => {
+    const el = thumbStripRef.current;
+    if (!el) return;
+    const active = el.querySelector<HTMLElement>(`[data-thumb-idx="${mainImageIdx}"]`);
+    if (!active) return;
+
+    const left = active.offsetLeft - el.clientWidth / 2 + active.offsetWidth / 2;
+    el.scrollTo({
+      left: Math.max(0, left),
+      behavior: "smooth",
+    });
+    updateThumbScrollState();
+  }, [mainImageIdx]);
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-6">
       {/* Breadcrumb */}
@@ -141,9 +196,9 @@ export function ProductDetailClient({
       </nav>
 
       {/* Product Detail Grid */}
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
         {/* Left: Image Gallery */}
-        <div className="space-y-3">
+        <div className="min-w-0 w-full max-w-full space-y-3 overflow-hidden">
           <div className="group relative aspect-square overflow-hidden rounded-lg border bg-white">
             <img
               src={
@@ -179,32 +234,61 @@ export function ProductDetailClient({
           </div>
 
           {images.length > 1 && (
-            <div className="flex gap-3">
-              {images.map((img, idx) => (
+            <div className="relative w-full max-w-full overflow-hidden">
+              {canScrollThumbLeft && (
                 <button
-                  key={idx}
                   type="button"
-                  onClick={() => setMainImageIdx(idx)}
-                  className={cn(
-                    "h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 bg-white p-1.5 transition-all sm:h-24 sm:w-24",
-                    mainImageIdx === idx
-                      ? "border-primary ring-2 ring-primary/30"
-                      : "border-transparent hover:border-primary/40"
-                  )}
+                  onClick={() => scrollThumbs("left")}
+                  aria-label="เลื่อนรูปย่อยไปทางซ้าย"
+                  className="absolute left-0 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border bg-white shadow-sm transition-colors hover:bg-slate-50"
                 >
-                  <img
-                    src={img}
-                    alt={`${product.name} ${idx + 1}`}
-                    className="h-full w-full object-contain"
-                  />
+                  <ChevronLeft className="h-4 w-4" />
                 </button>
-              ))}
+              )}
+              {canScrollThumbRight && (
+                <button
+                  type="button"
+                  onClick={() => scrollThumbs("right")}
+                  aria-label="เลื่อนรูปย่อยไปทางขวา"
+                  className="absolute right-0 top-1/2 z-10 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border bg-white shadow-sm transition-colors hover:bg-slate-50"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              )}
+
+              <div
+                ref={thumbStripRef}
+                className="w-full max-w-full overflow-x-auto overflow-y-hidden scroll-smooth px-9 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              >
+                <div className="flex w-max max-w-none gap-3">
+                  {images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      data-thumb-idx={idx}
+                      onClick={() => setMainImageIdx(idx)}
+                      className={cn(
+                        "h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 bg-white p-1.5 transition-all sm:h-24 sm:w-24",
+                        mainImageIdx === idx
+                          ? "border-primary ring-2 ring-primary/30"
+                          : "border-transparent hover:border-primary/40"
+                      )}
+                    >
+                      <img
+                        src={img}
+                        alt={`${product.name} ${idx + 1}`}
+                        className="h-full w-full object-contain"
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
 
         {/* Right: Product Info */}
-        <div>
+        <div className="min-w-0">
           {/* Category */}
           <Link
             href={`/categories/${categorySlug}`}
@@ -275,9 +359,15 @@ export function ProductDetailClient({
           <Separator className="my-4" />
 
           {/* Short description */}
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {product.description}
-          </p>
+          {isHtmlContent(product.description) ? (
+            <p className="text-sm leading-relaxed text-muted-foreground line-clamp-4">
+              {stripHtml(product.description)}
+            </p>
+          ) : (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {product.description}
+            </p>
+          )}
 
           <Separator className="my-4" />
 
@@ -426,7 +516,16 @@ export function ProductDetailClient({
         <div className="py-6">
           {activeTab === "desc" && (
             <div className="prose prose-sm max-w-none text-muted-foreground">
-              <p className="leading-relaxed">{product.description}</p>
+              {isHtmlContent(product.description) ? (
+                <div
+                  className="leading-relaxed [&_p]:mb-3 [&_span]:text-inherit"
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeProductHtml(product.description),
+                  }}
+                />
+              ) : (
+                <p className="leading-relaxed">{product.description}</p>
+              )}
             </div>
           )}
 
