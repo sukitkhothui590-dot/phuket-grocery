@@ -64,32 +64,46 @@ export function CategoryProductSection({
   return (
     <section className="mx-auto max-w-7xl px-4 py-4">
       <div className="flex flex-col overflow-hidden rounded-lg border lg:flex-row">
-        {/* Sidebar - compact horizontal bar on mobile, full sidebar on desktop */}
-        <div className="flex w-full items-center justify-between bg-slate-800 px-4 py-3 text-white lg:w-[220px] lg:flex-shrink-0 lg:flex-col lg:items-start lg:justify-between lg:p-5">
-          <div className="lg:w-full">
-            <h3 className="text-base font-bold lg:text-lg">{category.name}</h3>
-            <ul className="mt-3 hidden space-y-1.5 lg:block">
-              {category.subcategories.slice(0, 5).map((sub) => (
-                <li key={sub.id}>
-                  <Link
-                    href={`/categories/${category.slug}?sub=${sub.slug}`}
-                    className="flex items-center gap-1.5 text-sm text-slate-300 transition-colors hover:text-white"
-                  >
-                    <span className="h-1 w-1 flex-shrink-0 rounded-full bg-primary/70" />
-                    {sub.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {/* Category sidebar with image */}
+        <div className="relative w-full overflow-hidden text-white lg:w-[220px] lg:flex-shrink-0 lg:min-h-[420px]">
+          <img
+            src={category.image}
+            alt={category.name}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/55 to-black/25" />
 
-          <Link
-            href={`/categories/${category.slug}`}
-            className="inline-flex items-center gap-1 text-sm font-medium text-primary/50 transition-colors hover:text-white lg:mt-4"
-          >
-            ดูทั้งหมด
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
+          <div className="relative z-10 flex h-full min-h-[140px] flex-row items-center justify-between gap-3 px-4 py-4 lg:min-h-[420px] lg:flex-col lg:items-stretch lg:justify-between lg:p-5">
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-white/70">
+                หมวดหมู่
+              </p>
+              <h3 className="mt-1 text-xl font-bold drop-shadow-sm lg:text-2xl">
+                {category.name}
+              </h3>
+              <ul className="mt-4 hidden space-y-1.5 lg:block">
+                {category.subcategories.slice(0, 5).map((sub) => (
+                  <li key={sub.id}>
+                    <Link
+                      href={`/categories/${category.slug}?sub=${sub.slug}`}
+                      className="flex items-center gap-1.5 text-sm text-white/80 transition-colors hover:text-white"
+                    >
+                      <span className="h-1 w-1 flex-shrink-0 rounded-full bg-primary" />
+                      {sub.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <Link
+              href={`/categories/${category.slug}`}
+              className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-sm font-semibold text-slate-900 shadow-sm transition-colors hover:bg-primary hover:text-white"
+            >
+              ดูทั้งหมด
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
 
         {/* Product scroll area */}

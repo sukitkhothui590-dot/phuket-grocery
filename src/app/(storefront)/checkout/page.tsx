@@ -71,6 +71,7 @@ export default function CheckoutPage() {
   const [transferTime, setTransferTime] = useState("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(1500);
   const [bankAccountInfo, setBankAccountInfo] = useState("");
   const [codFee, setCodFee] = useState(20);
@@ -390,6 +391,7 @@ export default function CheckoutPage() {
       return;
     }
 
+    setConfirmOpen(false);
     setSubmitting(true);
 
     try {
@@ -1115,7 +1117,7 @@ export default function CheckoutPage() {
             <div className="text-right">
               <p className="mb-2 text-sm text-slate-500">{selectedPaymentLabel}</p>
               <Button
-                onClick={handleSubmitOrder}
+                onClick={() => setConfirmOpen(true)}
                 disabled={!canSubmit || submitting}
                 className="h-12 min-w-[210px] rounded-sm bg-destructive text-base font-semibold text-white hover:bg-destructive/90"
               >
@@ -1125,6 +1127,53 @@ export default function CheckoutPage() {
           </div>
         </section>
       </div>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>ยืนยันการสั่งซื้อสินค้า</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-slate-600">
+            <p>
+              กรุณาตรวจสอบรายละเอียดก่อนยืนยัน
+              ระบบจะสร้างคำสั่งซื้อทันทีหลังจากกดยืนยัน
+            </p>
+            <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <span>วิธีชำระเงิน</span>
+                <span className="font-medium text-slate-900">
+                  {selectedPaymentLabel}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span>ยอดชำระทั้งหมด</span>
+                <span className="text-lg font-semibold text-destructive">
+                  ฿{total.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="mt-2 flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              disabled={submitting}
+              onClick={() => setConfirmOpen(false)}
+            >
+              ยกเลิก
+            </Button>
+            <Button
+              type="button"
+              className="flex-1 bg-destructive text-white hover:bg-destructive/90"
+              disabled={!canSubmit || submitting}
+              onClick={() => void handleSubmitOrder()}
+            >
+              {submitting ? "กำลังดำเนินการ..." : "ยืนยันการสั่งซื้อ"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

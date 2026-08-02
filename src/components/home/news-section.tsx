@@ -25,12 +25,12 @@ export function NewsSection({ posts }: NewsSectionProps) {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {posts.slice(0, 3).map((post) => (
           <Link key={post.id} href={`/blog/${post.slug}`}>
-            <Card className="overflow-hidden transition-shadow hover:shadow-md">
-              <div className="aspect-video overflow-hidden bg-muted">
+            <Card className="gap-0 overflow-hidden py-0 transition-shadow hover:shadow-md">
+              <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
                 <img
                   src={post.coverImage}
                   alt={post.title}
-                  className="h-full w-full object-cover"
+                  className="absolute inset-0 h-full w-full object-cover object-center"
                 />
               </div>
               <CardContent className="p-4">

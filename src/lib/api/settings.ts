@@ -25,6 +25,23 @@ export async function getPublicSetting(key: string): Promise<string | null> {
   return settings[key] ?? null;
 }
 
+function resolveFacebookUrl(value?: string | null): string {
+  const url = (value ?? "").trim();
+  if (!url || url.includes("[")) {
+    return COMPANY_INFO.facebookUrl;
+  }
+
+  // Known broken handle from older settings — keep storefront on the live page.
+  if (
+    /facebook\.com\/phuketgrocery\/?$/i.test(url) &&
+    !/facebook\.com\/G\.phuketgrocery/i.test(url)
+  ) {
+    return COMPANY_INFO.facebookUrl;
+  }
+
+  return url;
+}
+
 export async function getStoreSettings(): Promise<{
   storeName: string;
   storePhone: string;
@@ -54,10 +71,7 @@ export async function getStoreSettings(): Promise<{
       settings.line_url && !settings.line_url.includes("[")
         ? settings.line_url
         : COMPANY_INFO.lineUrl,
-    facebookUrl:
-      settings.facebook_url && !settings.facebook_url.includes("[")
-        ? settings.facebook_url
-        : COMPANY_INFO.facebookUrl,
+    facebookUrl: resolveFacebookUrl(settings.facebook_url),
     freeShippingThreshold: Number(
       settings.free_shipping_threshold ?? 1500,
     ),
