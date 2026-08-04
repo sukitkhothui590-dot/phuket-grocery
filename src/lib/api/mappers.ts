@@ -362,7 +362,7 @@ export function mapBlog(blog: BackendBlog): BlogPost {
       ? resolveMediaUrl(blog.featuredImage)
       : getPlaceholderUrl(800, 400, blog.title),
     publishedAt: blog.publishedAt ?? blog.createdAt,
-    author: blog.author ?? "α╕áα╕╣α╣Çα╕üα╣çα╕òα╣éα╕üα╕úα╣Çα╕ïα╕¡α╕úα╕╡α╣ê",
+    author: blog.author ?? "ภูเก็ตโกรเซอรี่",
   };
 }
 
@@ -378,7 +378,7 @@ export function mapFaq(faq: BackendFaq): FAQ {
 export function mapAddress(address: BackendAddress): Address {
   return {
     id: address.id,
-    label: address.label || "α╕ùα╕╡α╣êα╕¡α╕óα╕╣α╣ê",
+    label: address.label || "บ้าน",
     fullName: address.recipientName,
     phone: address.phone,
     addressLine1: address.addressLine,
@@ -391,7 +391,7 @@ export function mapAddress(address: BackendAddress): Address {
 }
 
 export function mapUser(user: BackendUser): User {
-  const [firstName, ...rest] = (user.name || "α╕Ñα╕╣α╕üα╕äα╣ëα╕▓").trim().split(/\s+/);
+  const [firstName, ...rest] = (user.name || "ลูกค้า").trim().split(/\s+/);
 
   return {
     id: user.id,
@@ -436,10 +436,38 @@ function mapShippingMethod(value?: string): Order["shippingMethod"] {
   return value === "express" ? "express" : "standard";
 }
 
+function isBrokenThaiText(value?: string | null): boolean {
+  if (!value) return true;
+  const text = value.trim();
+  if (!text) return true;
+  // Corrupted UTF-8 leftovers / mixed latin noise seen on order unit labels.
+  if (/[α╕╣┤ëÖ¬▓ù╡ê¡óÑüáçòéúï▒öèё]/.test(text)) return true;
+  if (/ดๆ/.test(text) && /[èёÖ|]/.test(text)) return true;
+  return false;
+}
+
+function resolveUnitLabel(
+  ...candidates: Array<string | null | undefined>
+): string {
+  for (const candidate of candidates) {
+    if (candidate && !isBrokenThaiText(candidate)) {
+      return candidate.trim();
+    }
+  }
+  return "ชิ้น";
+}
+
 function mapOrderItem(item: BackendOrderItem): OrderItem {
-  const productName = item.productName ?? item.name ?? "α╕¬α╕┤α╕Öα╕äα╣ëα╕▓";
+  const rawName = item.productName ?? item.name;
+  const productName =
+    rawName && !isBrokenThaiText(rawName) ? rawName : "สินค้า";
   const unitPrice = item.unitPrice ?? item.selectedUnit?.price ?? 0;
   const unitId = item.selectedUnit?.id ?? item.productUnitId ?? item.productId;
+  const labelTh = resolveUnitLabel(
+    item.selectedUnit?.labelTh,
+    item.unitName,
+    item.selectedUnit?.labelEn,
+  );
 
   return {
     id: item.id,
@@ -448,15 +476,22 @@ function mapOrderItem(item: BackendOrderItem): OrderItem {
     productImage: item.productImage
       ? resolveMediaUrl(item.productImage)
       : getPlaceholderUrl(120, 120, productName),
-    selectedUnit: item.selectedUnit ?? {
+    selectedUnit: {
       id: unitId,
-      unitType: "piece",
-      labelTh: item.unitName ?? "α╕èα╕┤α╣ëα╕Ö",
-      labelEn: item.unitName ?? "piece",
+      unitType: item.selectedUnit?.unitType ?? "piece",
+      labelTh,
+      labelEn:
+        item.selectedUnit?.labelEn ??
+        item.unitName ??
+        item.selectedUnit?.unitType ??
+        "piece",
       price: unitPrice,
-      conversionRate: 1,
-      sku: item.productUnitId ?? `${item.productId}-unit`,
-      stock: 0,
+      conversionRate: item.selectedUnit?.conversionRate ?? 1,
+      sku:
+        item.selectedUnit?.sku ??
+        item.productUnitId ??
+        `${item.productId}-unit`,
+      stock: item.selectedUnit?.stock ?? 0,
     },
     quantity: item.quantity,
     subtotal: item.lineTotal ?? unitPrice * item.quantity,
@@ -493,7 +528,7 @@ export function mapOrder(order: BackendOrder): Order {
     slipUploadedAt: order.slipUploadedAt ?? undefined,
     shippingAddress: {
       id: `addr-${order.id}`,
-      label: "α╕êα╕▒α╕öα╕¬α╣êα╕ç",
+      label: "ที่จัดส่ง",
       fullName: shipping?.recipientName ?? order.recipientName ?? "",
       phone: shipping?.phone ?? order.phone ?? "",
       addressLine1: shipping?.addressLine ?? order.addressLine ?? "",
