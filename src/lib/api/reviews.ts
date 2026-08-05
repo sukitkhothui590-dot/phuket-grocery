@@ -62,23 +62,47 @@ export async function getProductReviews(
   };
 }
 
+export type ReviewEligibilityReason = "ok" | "not_purchased" | "already_reviewed";
+
+/**
+ * Only a signed-in customer who took delivery of the product may review it.
+ * Asking up front lets the page render the right state instead of rejecting a
+ * review the customer has already typed out.
+ */
+export async function getReviewEligibility(
+  productSlug: string,
+  token: string,
+): Promise<{ canReview: boolean; reason: ReviewEligibilityReason }> {
+  const response = await apiGet<{
+    canReview: boolean;
+    reason: ReviewEligibilityReason;
+  }>(`/products/${productSlug}/reviews/eligibility`, { token });
+
+  if (!response.success) {
+    return { canReview: false, reason: "not_purchased" };
+  }
+  return response.data;
+}
+
 export async function submitProductReview(
   productSlug: string,
+  token: string,
   data: {
-    name?: string;
     rating: number;
     comment: string;
     imageUrls?: string[];
   },
 ): Promise<{ success: boolean; review?: ProductReview; error?: string }> {
+  // The token must be passed through: apiRequest only retries a 401 with a
+  // refreshed token when the original request carried one.
   const response = await apiPost<BackendReview>(
     `/products/${productSlug}/reviews`,
     {
-      name: data.name,
       rating: data.rating,
       comment: data.comment,
       imageUrls: data.imageUrls,
     },
+    { token },
   );
 
   if (!response.success) {

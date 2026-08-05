@@ -1,22 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Star,
   MessageSquarePlus,
   UserRound,
   ImagePlus,
+  ShoppingBag,
+  CheckCircle2,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   getProductReviews,
+  getReviewEligibility,
   submitProductReview,
   type ProductReview,
+  type ReviewEligibilityReason,
 } from "@/lib/api/reviews";
+import { DEFAULT_RATING } from "@/components/product/product-rating";
 import { uploadFile } from "@/lib/api/upload";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -79,12 +85,13 @@ function formatDate(iso: string) {
 
 export function ProductReviews({ productSlug }: ProductReviewsProps) {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const pathname = usePathname();
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [averageRating, setAverageRating] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [eligibility, setEligibility] = useState<ReviewEligibilityReason | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [name, setName] = useState("");
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -104,9 +111,21 @@ export function ProductReviews({ productSlug }: ProductReviewsProps) {
     })();
   }, [productSlug]);
 
+  useEffect(() => {
+    if (!accessToken) {
+      setEligibility(null);
+      return;
+    }
+    void (async () => {
+      const result = await getReviewEligibility(productSlug, accessToken);
+      setEligibility(result.reason);
+    })();
+  }, [productSlug, accessToken]);
+
   const average = useMemo(() => {
     if (reviewCount > 0) return averageRating;
-    if (reviews.length === 0) return 0;
+    // No reviews yet → show the default 5.0 rather than a bare zero.
+    if (reviews.length === 0) return DEFAULT_RATING;
     return (
       Math.round(
         (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) * 10
@@ -158,21 +177,23 @@ export function ProductReviews({ productSlug }: ProductReviewsProps) {
       return;
     }
 
+    if (!accessToken) {
+      setError("กรุณาเข้าสู่ระบบเพื่อเขียนรีวิว");
+      return;
+    }
+
     setSubmitting(true);
     setError("");
 
     const imageUrls: string[] = [];
-    if (imageFiles.length > 0 && accessToken) {
-      for (const file of imageFiles) {
-        const uploadResult = await uploadFile(file, accessToken);
-        if (uploadResult.success && uploadResult.url) {
-          imageUrls.push(uploadResult.url);
-        }
+    for (const file of imageFiles) {
+      const uploadResult = await uploadFile(file, accessToken);
+      if (uploadResult.success && uploadResult.url) {
+        imageUrls.push(uploadResult.url);
       }
     }
 
-    const result = await submitProductReview(productSlug, {
-      name: name.trim() || undefined,
+    const result = await submitProductReview(productSlug, accessToken, {
       rating,
       comment: comment.trim(),
       imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
@@ -191,8 +212,8 @@ export function ProductReviews({ productSlug }: ProductReviewsProps) {
       const total = prev * (reviewCount) + rating;
       return Math.round((total / (reviewCount + 1)) * 10) / 10;
     });
+    setEligibility("already_reviewed");
 
-    setName("");
     setRating(0);
     setComment("");
     setImageFiles([]);
@@ -220,8 +241,52 @@ export function ProductReviews({ productSlug }: ProductReviewsProps) {
           </div>
         </div>
 
+        {!accessToken ? (
+          <div
+            data-testid="review-login-required"
+            className="mt-5 rounded-lg border border-dashed p-4 text-center"
+          >
+            <UserRound className="mx-auto h-6 w-6 text-muted-foreground/50" />
+            <p className="mt-2 text-sm text-foreground">เข้าสู่ระบบเพื่อเขียนรีวิว</p>
+            <Link
+              href={`/login?redirect=${encodeURIComponent(pathname)}`}
+              className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
+            >
+              เข้าสู่ระบบ
+            </Link>
+          </div>
+        ) : eligibility === "not_purchased" ? (
+          <div
+            data-testid="review-not-purchased"
+            className="mt-5 rounded-lg border border-dashed p-4 text-center"
+          >
+            <ShoppingBag className="mx-auto h-6 w-6 text-muted-foreground/50" />
+            <p className="mt-2 text-sm text-foreground">
+              รีวิวได้เฉพาะลูกค้าที่ซื้อสินค้านี้และได้รับสินค้าแล้ว
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              เมื่อคำสั่งซื้อของคุณจัดส่งสำเร็จ คุณจะสามารถเขียนรีวิวได้
+            </p>
+          </div>
+        ) : eligibility === "already_reviewed" ? (
+          <div
+            data-testid="review-already-reviewed"
+            className="mt-5 rounded-lg border border-dashed p-4 text-center"
+          >
+            <CheckCircle2 className="mx-auto h-6 w-6 text-green-600/60" />
+            <p className="mt-2 text-sm text-foreground">คุณรีวิวสินค้านี้ไปแล้ว</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              ขอบคุณที่ช่วยแบ่งปันประสบการณ์
+            </p>
+          </div>
+        ) : eligibility === null ? (
+          <p className="mt-5 py-4 text-center text-sm text-muted-foreground">
+            กำลังตรวจสอบสิทธิ์การรีวิว...
+          </p>
+        ) : (
         <form
           onSubmit={handleSubmit}
+          data-testid="review-form"
           className="mt-5 space-y-4 rounded-lg border p-4"
         >
           <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -234,17 +299,6 @@ export function ProductReviews({ productSlug }: ProductReviewsProps) {
               ให้คะแนน
             </label>
             <StarRating value={rating} onChange={setRating} />
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-xs font-medium text-foreground">
-              ชื่อ (ไม่บังคับ)
-            </label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="ชื่อของคุณ"
-            />
           </div>
 
           <div>
@@ -305,7 +359,7 @@ export function ProductReviews({ productSlug }: ProductReviewsProps) {
               className="hidden"
             />
             <p className="mt-1 text-[10px] text-muted-foreground">
-              สูงสุด {MAX_IMAGES} รูป{!accessToken && " (ต้องเข้าสู่ระบบเพื่อแนบรูป)"}
+              สูงสุด {MAX_IMAGES} รูป
             </p>
           </div>
 
@@ -320,6 +374,7 @@ export function ProductReviews({ productSlug }: ProductReviewsProps) {
             {submitting ? "กำลังส่ง..." : "ส่งรีวิว"}
           </Button>
         </form>
+        )}
       </div>
 
       <div>

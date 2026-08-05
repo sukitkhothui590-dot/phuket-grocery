@@ -5,7 +5,6 @@ import {
   type BackendCategory,
   type BackendProduct,
 } from "@/lib/api/mappers";
-import { enrichProductsWithRatings } from "@/lib/product-ratings";
 import { decodeRouteParam } from "@/lib/route-params";
 import type { Category, Product } from "@/types";
 
@@ -172,7 +171,7 @@ export async function getFeaturedProducts(limit = 48): Promise<Product[]> {
     return [];
   }
 
-  return enrichProductsWithRatings(response.data.map(mapProduct));
+  return response.data.map(mapProduct);
 }
 
 /**
@@ -186,7 +185,7 @@ export async function getPromoProducts(limit = 12): Promise<Product[]> {
     limit,
   });
 
-  return enrichProductsWithRatings(products);
+  return products;
 }
 
 /**
@@ -204,7 +203,7 @@ export async function getOnSaleProducts(params?: {
   });
 
   return {
-    products: await enrichProductsWithRatings(result.products),
+    products: result.products,
     total: result.total,
   };
 }
@@ -223,7 +222,7 @@ export async function getNewProducts(limit = 10): Promise<Product[]> {
     return [];
   }
 
-  return enrichProductsWithRatings(response.data.map(mapProduct));
+  return response.data.map(mapProduct);
 }
 
 export async function getBestSellerProducts(limit = 5): Promise<Product[]> {
@@ -231,7 +230,7 @@ export async function getBestSellerProducts(limit = 5): Promise<Product[]> {
     sort: "price-asc",
     limit,
   });
-  return enrichProductsWithRatings(products.slice(0, limit));
+  return products.slice(0, limit);
 }
 
 export async function getRelatedProducts(
@@ -243,9 +242,7 @@ export async function getRelatedProducts(
     limit: 5,
   });
 
-  return enrichProductsWithRatings(
-    products.filter((product) => product.id !== productId).slice(0, 4),
-  );
+  return products.filter((product) => product.id !== productId).slice(0, 4);
 }
 
 export async function getProductsByCategory(
@@ -257,11 +254,11 @@ export async function getProductsByCategory(
 
   if (root) {
     const { products } = await getProductsInCategory(root, { limit });
-    return enrichProductsWithRatings(products);
+    return products;
   }
 
   const { products } = await getProducts({ categoryId, limit });
-  return enrichProductsWithRatings(products);
+  return products;
 }
 
 export async function getCategories(): Promise<Category[]> {

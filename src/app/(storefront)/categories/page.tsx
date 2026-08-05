@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getCategories, getProducts } from "@/lib/api/products";
-import { enrichProductsWithRatings } from "@/lib/product-ratings";
 import { ProductCard } from "@/components/product/product-card";
 
 export default async function CategoriesPage({
@@ -12,11 +11,10 @@ export default async function CategoriesPage({
   const query = search?.trim();
 
   if (query) {
-    const { products: rawProducts, total } = await getProducts({
+    const { products, total } = await getProducts({
       search: query,
       limit: 24,
     });
-    const products = await enrichProductsWithRatings(rawProducts);
 
     return (
       <div className="mx-auto max-w-6xl px-4 py-8">

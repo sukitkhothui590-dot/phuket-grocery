@@ -67,6 +67,8 @@ interface BackendProduct {
   isFeatured?: boolean;
   isNew?: boolean;
   isActive: boolean;
+  averageRating?: number;
+  reviewCount?: number;
   createdAt: string;
   updatedAt?: string;
   category?: { id: string; name: string; slug: string };
@@ -292,6 +294,8 @@ export function mapProduct(product: BackendProduct): Product {
     baseStock: availableStock ?? 0,
     isFeatured: product.isFeatured ?? false,
     isNew,
+    averageRating: product.averageRating ?? 0,
+    reviewCount: product.reviewCount ?? 0,
     activeDeal: product.activeDeal
       ? {
           id: product.activeDeal.id,
