@@ -2,7 +2,6 @@ import { apiGet, apiPost } from "@/lib/api/client";
 import { mapBanner, mapBlog, mapFaq } from "@/lib/api/mappers";
 import { getPublicSettings } from "@/lib/api/settings";
 import { COMPANY_INFO } from "@/lib/constants";
-import { googleReviews as mockGoogleReviews } from "@/lib/mock-data/content";
 import { decodeRouteParam } from "@/lib/route-params";
 import { resolveStoreLink } from "@/lib/store-links";
 import type { Banner, BlogPost, FAQ, GoogleReview, PromotionCard } from "@/types";
@@ -182,9 +181,13 @@ export async function getGoogleReviews(): Promise<{
 }> {
   const settings = await getPublicSettings();
 
-  // Temporary mock reviews until Google Places API is connected
+  // Empty until Google Places is connected: these would be shown as real reviews
+  // of the shop, so the placeholder testimonials in mock-data/content.ts must not
+  // reach a live storefront. GoogleReviews renders a link to the Google page when
+  // the list is empty. `googleReviews` in @/lib/mock-data/content is still there
+  // for design work.
   return {
-    reviews: mockGoogleReviews,
+    reviews: [],
     reviewLink:
       settings.google_review_link ??
       settings.google_maps_url ??
