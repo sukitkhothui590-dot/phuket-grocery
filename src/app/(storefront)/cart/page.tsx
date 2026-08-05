@@ -654,6 +654,7 @@ export default function CartPage() {
 
             <Button
               size="lg"
+              data-testid="cart-checkout"
               className="h-12 min-w-[220px] rounded-sm bg-destructive text-base font-semibold text-white hover:bg-destructive/90"
               nativeButton={false}
               render={<Link href="/checkout" />}

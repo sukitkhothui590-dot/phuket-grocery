@@ -143,6 +143,7 @@ export function ProductCard({ product, sourceLabel }: ProductCardProps) {
 
         <button
           type="button"
+          data-testid="add-to-cart"
           onClick={handleAddToCart}
           className={`mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-bold text-white shadow-sm transition-all active:scale-[0.98] ${
             added

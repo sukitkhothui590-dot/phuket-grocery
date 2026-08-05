@@ -1117,6 +1117,7 @@ export default function CheckoutPage() {
             <div className="text-right">
               <p className="mb-2 text-sm text-slate-500">{selectedPaymentLabel}</p>
               <Button
+                data-testid="place-order"
                 onClick={() => setConfirmOpen(true)}
                 disabled={!canSubmit || submitting}
                 className="h-12 min-w-[210px] rounded-sm bg-destructive text-base font-semibold text-white hover:bg-destructive/90"
