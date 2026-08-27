@@ -1,14 +1,28 @@
 import Link from "next/link";
 import { PackageOpen, Tag } from "lucide-react";
 import { ProductGrid } from "@/components/product/product-grid";
+import {
+  ProductPagination,
+  STOREFRONT_PAGE_SIZE,
+  parsePage,
+} from "@/components/product/product-pagination";
 import { getOnSaleProducts } from "@/lib/api/products";
 
 /**
  * Special Deal listing — products from `GET /products?onSale=true` only
  * (static compareAt sales ∪ active campaign products). Do not load campaigns.
  */
-export default async function DealsPage() {
-  const { products, total } = await getOnSaleProducts({ limit: 48 });
+export default async function DealsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageRaw } = await searchParams;
+  const page = parsePage(pageRaw);
+  const { products, total } = await getOnSaleProducts({
+    page,
+    limit: STOREFRONT_PAGE_SIZE,
+  });
 
   return (
     <main className="mx-auto min-h-[60vh] max-w-6xl px-4 py-8">
@@ -28,7 +42,7 @@ export default async function DealsPage() {
         )}
       </header>
 
-      {products.length === 0 ? (
+      {total === 0 ? (
         <div className="rounded-lg border border-dashed bg-slate-50 px-6 py-16 text-center">
           <PackageOpen className="mx-auto h-14 w-14 text-slate-300" />
           <h2 className="mt-4 text-lg font-semibold text-foreground">
@@ -45,7 +59,15 @@ export default async function DealsPage() {
           </Link>
         </div>
       ) : (
-        <ProductGrid products={products} sourceLabel="ดีลพิเศษ" />
+        <div id="product-results" className="scroll-mt-36">
+          <ProductGrid products={products} sourceLabel="ดีลพิเศษ" />
+          <ProductPagination
+            pathname="/deals"
+            page={page}
+            limit={STOREFRONT_PAGE_SIZE}
+            total={total}
+          />
+        </div>
       )}
     </main>
   );

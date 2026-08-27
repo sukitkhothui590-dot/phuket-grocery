@@ -14,12 +14,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProductGrid } from "@/components/product/product-grid";
+import {
+  ProductPagination,
+  STOREFRONT_PAGE_SIZE,
+} from "@/components/product/product-pagination";
 import type { Category, Product } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface CategoryProductsClientProps {
   category: Category;
   products: Product[];
+  total: number;
+  page: number;
   currentSub: string;
   currentSearch: string;
   currentSort: string;
@@ -35,6 +41,8 @@ const SORT_OPTIONS = [
 export function CategoryProductsClient({
   category,
   products,
+  total,
+  page,
   currentSub,
   currentSearch,
   currentSort,
@@ -53,6 +61,9 @@ export function CategoryProductsClient({
         } else {
           params.delete(key);
         }
+      }
+      if (!("page" in updates)) {
+        params.delete("page");
       }
       router.push(`/categories/${category.slug}?${params.toString()}`);
     },
@@ -225,11 +236,22 @@ export function CategoryProductsClient({
         </aside>
 
         {/* Product grid */}
-        <div className="min-w-0 flex-1">
+        <div id="product-results" className="min-w-0 flex-1 scroll-mt-36">
           <p className="mb-3 text-sm text-muted-foreground">
-            พบ {products.length} สินค้า
+            พบ {total.toLocaleString()} สินค้า
           </p>
           <ProductGrid products={products} />
+          <ProductPagination
+            pathname={`/categories/${category.slug}`}
+            query={{
+              sub: currentSub || undefined,
+              search: currentSearch || undefined,
+              sort: currentSort || undefined,
+            }}
+            page={page}
+            limit={STOREFRONT_PAGE_SIZE}
+            total={total}
+          />
         </div>
       </div>
     </div>

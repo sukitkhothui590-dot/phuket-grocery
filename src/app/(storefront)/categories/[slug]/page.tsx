@@ -2,6 +2,10 @@ import {
   getProductsInCategory,
   resolveCategoryRoute,
 } from "@/lib/api/products";
+import {
+  STOREFRONT_PAGE_SIZE,
+  parsePage,
+} from "@/components/product/product-pagination";
 import { decodeRouteParam } from "@/lib/route-params";
 import { notFound } from "next/navigation";
 import { CategoryProductsClient } from "./category-products-client";
@@ -12,6 +16,7 @@ interface Props {
     sub?: string;
     search?: string;
     sort?: string;
+    page?: string;
   }>;
 }
 
@@ -29,12 +34,14 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     : resolved.subFromPath;
 
   const sort = (sp.sort as "price-asc" | "price-desc" | "newest") || undefined;
+  const page = parsePage(sp.page);
 
-  const { products } = await getProductsInCategory(category, {
+  const { products, total } = await getProductsInCategory(category, {
     sub,
     search: sp.search || undefined,
     sort,
-    limit: 100,
+    page,
+    limit: STOREFRONT_PAGE_SIZE,
   });
 
   const activeSub =
@@ -46,6 +53,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     <CategoryProductsClient
       category={category}
       products={products}
+      total={total}
+      page={page}
       currentSub={activeSub}
       currentSearch={sp.search ?? ""}
       currentSort={sp.sort ?? ""}

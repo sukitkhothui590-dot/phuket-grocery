@@ -17,26 +17,6 @@ function toApiSort(sort?: ProductSort) {
   return undefined;
 }
 
-function sortProducts(products: Product[], sort?: ProductSort): Product[] {
-  if (sort === "price-asc") {
-    return [...products].sort(
-      (a, b) => (a.units[0]?.price ?? 0) - (b.units[0]?.price ?? 0),
-    );
-  }
-  if (sort === "price-desc") {
-    return [...products].sort(
-      (a, b) => (b.units[0]?.price ?? 0) - (a.units[0]?.price ?? 0),
-    );
-  }
-  if (sort === "newest") {
-    return [...products].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
-  }
-  return products;
-}
-
 export async function getProducts(params?: {
   categoryId?: string;
   subcategoryId?: string;
@@ -92,10 +72,12 @@ export async function getProductsInCategory(
     sub?: string;
     search?: string;
     sort?: ProductSort;
+    page?: number;
     limit?: number;
   },
 ): Promise<{ products: Product[]; total: number }> {
-  const limit = options?.limit ?? 100;
+  const limit = options?.limit ?? 24;
+  const page = options?.page ?? 1;
   const subKey = options?.sub?.trim()
     ? decodeRouteParam(options.sub.trim())
     : undefined;
@@ -110,25 +92,20 @@ export async function getProductsInCategory(
         search: options?.search,
         sort: options?.sort,
         limit,
-        page: 1,
+        page,
       });
     }
   }
 
   // Single API call: parent id + direct children (Nest includeDescendants).
-  const result = await getProducts({
+  return getProducts({
     categoryId: category.id,
     includeDescendants: true,
     search: options?.search,
     sort: options?.sort,
     limit,
-    page: 1,
+    page,
   });
-
-  return {
-    products: sortProducts(result.products, options?.sort),
-    total: result.total,
-  };
 }
 
 export async function getProductBySlug(

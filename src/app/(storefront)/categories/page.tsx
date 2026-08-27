@@ -1,19 +1,26 @@
 import Link from "next/link";
 import { getCategories, getProducts } from "@/lib/api/products";
 import { ProductCard } from "@/components/product/product-card";
+import {
+  ProductPagination,
+  STOREFRONT_PAGE_SIZE,
+  parsePage,
+} from "@/components/product/product-pagination";
 
 export default async function CategoriesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string }>;
+  searchParams: Promise<{ search?: string; page?: string }>;
 }) {
-  const { search } = await searchParams;
+  const { search, page: pageRaw } = await searchParams;
   const query = search?.trim();
 
   if (query) {
+    const page = parsePage(pageRaw);
     const { products, total } = await getProducts({
       search: query,
-      limit: 24,
+      page,
+      limit: STOREFRONT_PAGE_SIZE,
     });
 
     return (
@@ -27,7 +34,7 @@ export default async function CategoriesPage({
           </p>
         </div>
 
-        {products.length === 0 ? (
+        {total === 0 ? (
           <div className="rounded-2xl border border-dashed bg-slate-50 px-6 py-14 text-center">
             <p className="text-sm text-muted-foreground">
               ไม่พบสินค้าที่ตรงกับคำค้นหา ลองค้นหาด้วยคำอื่น
@@ -40,10 +47,19 @@ export default async function CategoriesPage({
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+          <div id="product-results" className="scroll-mt-36">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+            <ProductPagination
+              pathname="/categories"
+              query={{ search: query }}
+              page={page}
+              limit={STOREFRONT_PAGE_SIZE}
+              total={total}
+            />
           </div>
         )}
       </div>
