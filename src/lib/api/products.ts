@@ -171,7 +171,7 @@ export async function getProductById(
 export async function getFeaturedProducts(limit = 48): Promise<Product[]> {
   const response = await apiGet<BackendProduct[]>("/products", {
     searchParams: {
-      isFeatured: "true",
+      featured: "true",
       limit,
       page: 1,
     },
