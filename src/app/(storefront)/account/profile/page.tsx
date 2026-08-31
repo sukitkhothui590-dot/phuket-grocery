@@ -6,11 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuthStore } from "@/stores/auth-store";
-import {
-  requestEmailVerification,
-  updateProfile,
-  verifyEmailChange,
-} from "@/lib/api/auth";
+import { updateProfile } from "@/lib/api/auth";
 import {
   createAddress,
   deleteAddress,
@@ -74,11 +70,6 @@ export default function ProfilePage() {
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [addressLoading, setAddressLoading] = useState(false);
   const [addressError, setAddressError] = useState("");
-  const [emailOtp, setEmailOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [emailVerified, setEmailVerified] = useState(false);
-  const [emailVerifyLoading, setEmailVerifyLoading] = useState(false);
-  const [emailVerifyError, setEmailVerifyError] = useState("");
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -108,24 +99,8 @@ export default function ProfilePage() {
         email: user.email,
         phone: user.phone,
       });
-      setEmailOtp("");
-      setOtpSent(false);
-      setEmailVerified(false);
-      setEmailVerifyError("");
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const watchedEmail = profileForm.watch("email");
-  const emailChanged =
-    !!user &&
-    watchedEmail.trim().toLowerCase() !== (user.email || "").trim().toLowerCase();
-
-  useEffect(() => {
-    setEmailVerified(false);
-    setOtpSent(false);
-    setEmailOtp("");
-    setEmailVerifyError("");
-  }, [watchedEmail]);
 
   if (!user) {
     return (
@@ -134,42 +109,6 @@ export default function ProfilePage() {
       </div>
     );
   }
-
-  const handleSendEmailCode = async () => {
-    if (!accessToken) return;
-    const email = profileForm.getValues("email");
-    if (!email) return;
-
-    setEmailVerifyLoading(true);
-    setEmailVerifyError("");
-    const result = await requestEmailVerification(accessToken, email);
-    setEmailVerifyLoading(false);
-
-    if (!result.success) {
-      setEmailVerifyError(result.error ?? "ส่งรหัสยืนยันไม่สำเร็จ");
-      return;
-    }
-
-    setOtpSent(true);
-  };
-
-  const handleConfirmEmailCode = async () => {
-    if (!accessToken) return;
-    const email = profileForm.getValues("email");
-    if (!email || !emailOtp.trim()) return;
-
-    setEmailVerifyLoading(true);
-    setEmailVerifyError("");
-    const result = await verifyEmailChange(accessToken, email, emailOtp.trim());
-    setEmailVerifyLoading(false);
-
-    if (!result.success) {
-      setEmailVerifyError(result.error ?? "ยืนยันอีเมลไม่สำเร็จ");
-      return;
-    }
-
-    setEmailVerified(true);
-  };
 
   const handleProfileSubmit = async (data: ProfileFormData) => {
     if (!accessToken) return;
@@ -197,9 +136,6 @@ export default function ProfilePage() {
       phone: result.user?.phone ?? data.phone,
     });
     setProfileSaved(true);
-    setEmailVerified(false);
-    setOtpSent(false);
-    setEmailOtp("");
     setTimeout(() => setProfileSaved(false), 3000);
   };
 
@@ -362,55 +298,6 @@ export default function ProfilePage() {
                     {profileForm.formState.errors.email.message}
                   </p>
                 )}
-                <div className="rounded-md border border-dashed border-amber-300 bg-amber-50 p-3">
-                  <p className="text-xs font-medium text-foreground">
-                    ยืนยันอีเมล
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    ตอนนี้บันทึกอีเมลใหม่ผ่านโปรไฟล์ได้เลย
-                    {emailChanged
-                      ? " (รอหลังบ้านเปิดระบบส่งรหัสยืนยัน)"
-                      : " — ระบบส่งรหัสยืนยันอีเมลยังไม่พร้อมจากหลังบ้าน"}
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={emailVerifyLoading || !watchedEmail || !emailChanged}
-                      onClick={() => void handleSendEmailCode()}
-                    >
-                      {emailVerifyLoading ? "กำลังส่ง..." : "ส่งรหัสยืนยัน"}
-                    </Button>
-                    {otpSent && (
-                      <>
-                        <Input
-                          value={emailOtp}
-                          onChange={(e) => setEmailOtp(e.target.value)}
-                          placeholder="รหัสยืนยัน"
-                          className="h-8 w-36"
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          disabled={emailVerifyLoading || !emailOtp.trim()}
-                          onClick={() => void handleConfirmEmailCode()}
-                        >
-                          ยืนยัน
-                        </Button>
-                      </>
-                    )}
-                    {emailVerified && (
-                      <span className="flex items-center gap-1 text-xs text-green-600">
-                        <Check className="size-3.5" />
-                        ยืนยันแล้ว
-                      </span>
-                    )}
-                  </div>
-                  {emailVerifyError && (
-                    <p className="mt-2 text-xs text-red-600">{emailVerifyError}</p>
-                  )}
-                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="phone">เบอร์โทรศัพท์</Label>

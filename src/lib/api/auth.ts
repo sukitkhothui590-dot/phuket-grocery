@@ -184,68 +184,6 @@ export async function requestPasswordReset(
   return { success: true };
 }
 
-export async function requestEmailVerification(
-  token: string,
-  email: string,
-): Promise<{ success: boolean; error?: string }> {
-  const response = await apiPost<{ message?: string }>(
-    "/auth/request-email-verification",
-    { email },
-    { token },
-  );
-
-  if (!response.success) {
-    // Fallback endpoint naming used by some backends.
-    const fallback = await apiPost<{ message?: string }>(
-      "/users/me/request-email-change",
-      { email },
-      { token },
-    );
-    if (!fallback.success) {
-      return {
-        success: false,
-        error:
-          response.error.message ||
-          fallback.error.message ||
-          "ยังไม่สามารถส่งรหัสยืนยันอีเมลได้ กรุณาติดต่อแอดมิน",
-      };
-    }
-  }
-
-  return { success: true };
-}
-
-export async function verifyEmailChange(
-  token: string,
-  email: string,
-  code: string,
-): Promise<{ success: boolean; error?: string }> {
-  const response = await apiPost<{ message?: string }>(
-    "/auth/verify-email",
-    { email, code },
-    { token },
-  );
-
-  if (!response.success) {
-    const fallback = await apiPost<{ message?: string }>(
-      "/users/me/verify-email-change",
-      { email, code },
-      { token },
-    );
-    if (!fallback.success) {
-      return {
-        success: false,
-        error:
-          response.error.message ||
-          fallback.error.message ||
-          "รหัสยืนยันไม่ถูกต้องหรือหมดอายุ",
-      };
-    }
-  }
-
-  return { success: true };
-}
-
 export async function resetPassword(
   token: string,
   password: string,
