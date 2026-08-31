@@ -10,6 +10,11 @@ type ThaiGeographyEntry = {
   postalCode: number;
 };
 
+/** ponytail: we only deliver in Phuket — filter at the source so every level
+ *  (province/district/subdistrict/postcode) is constrained by one line.
+ *  Widen by adding provinces here when new branches open. */
+const SERVICE_PROVINCES = ["ภูเก็ต"];
+
 let geographyCache: ThaiGeographyEntry[] | null = null;
 
 async function getGeographyData() {
@@ -25,7 +30,10 @@ async function getGeographyData() {
     throw new Error(`Failed to fetch Thai geography: ${response.status}`);
   }
 
-  geographyCache = (await response.json()) as ThaiGeographyEntry[];
+  const all = (await response.json()) as ThaiGeographyEntry[];
+  geographyCache = all.filter((item) =>
+    SERVICE_PROVINCES.includes(item.provinceNameTh)
+  );
   return geographyCache;
 }
 
