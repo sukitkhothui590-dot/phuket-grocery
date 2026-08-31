@@ -34,7 +34,7 @@ export const COMPANY_INFO = {
   workingHours: "เปิดให้บริการทุกวัน ตั้งแต่เวลา 08:00 น. – 21:00 น.",
   workingHoursNote: "เปิดให้บริการทุกวัน",
   deliveryHours: "กรุณาติดต่อทีมงานเพื่อสอบถามรอบจัดส่งและบริการสำหรับองค์กร",
-  googleMapUrl: "https://maps.app.goo.gl/zHrRLVtJFz4pgr2r9",
+  googleMapUrl: "https://maps.app.goo.gl/j44APUrRmv52AuPV6",
   googleMapEmbed: "",
   googlePlaceId: "ChIJxxxxxxxxxxxxx",
   yearEstablished: 2019,

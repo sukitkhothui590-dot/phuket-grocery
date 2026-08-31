@@ -6,6 +6,7 @@ import {
   MessageCircle,
   Phone,
 } from "lucide-react";
+import { StoreBranchList } from "@/components/contact/store-branch-list";
 import { COMPANY_INFO } from "@/lib/constants";
 import { getStoreSettings } from "@/lib/api/settings";
 
@@ -62,12 +63,6 @@ export default async function ContactPage() {
       label: "LINE",
     },
   ].filter((social) => !!social.href && !social.href.includes("["));
-
-  const mapEmbedSrc =
-    COMPANY_INFO.googleMapEmbed ||
-    `https://www.google.com/maps?q=${encodeURIComponent(
-      settings.storeAddress || COMPANY_INFO.address,
-    )}&output=embed`;
 
   return (
     <div className="bg-white">
@@ -139,24 +134,7 @@ export default async function ContactPage() {
           </div>
         </div>
 
-        <div className="relative mt-12 overflow-hidden rounded-2xl border border-gray-200">
-          <iframe
-            title="แผนที่ภูเก็ตโกรเซอรี่"
-            src={mapEmbedSrc}
-            className="h-[360px] w-full border-0"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-          />
-          <a
-            href={COMPANY_INFO.googleMapUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-primary/90"
-          >
-            <MapPin className="h-4 w-4" />
-            เปิดใน Google Maps เพื่อนำทาง
-          </a>
-        </div>
+        <StoreBranchList phone={settings.storePhone || COMPANY_INFO.phone} />
       </div>
     </div>
   );

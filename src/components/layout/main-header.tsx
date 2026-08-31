@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense, useEffect, useState } from "react";
 import {
   Search,
   ShoppingCart,
@@ -8,6 +9,7 @@ import {
   Menu,
   LayoutGrid,
   Phone,
+  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/stores/cart-store";
@@ -21,9 +23,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
 import { COMPANY_INFO } from "@/lib/constants";
 import { getStoreSettings } from "@/lib/api/settings";
+import { MainHeaderSearch } from "@/components/layout/main-header-search";
 
 interface MainHeaderProps {
   onMenuOpen: () => void;
@@ -35,6 +37,7 @@ export function MainHeader({
   onCategoryDrawerOpen,
 }: MainHeaderProps) {
   const [mounted, setMounted] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [storePhone, setStorePhone] = useState<string>(COMPANY_INFO.mobile);
   useEffect(() => setMounted(true), []);
   useEffect(() => {
@@ -48,14 +51,6 @@ export function MainHeader({
   const subtotal = useCartStore((s) => s.getSubtotal());
   const { isAuthenticated, user } = useAuthStore();
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/categories?search=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
 
   return (
     <div className="bg-primary">
@@ -63,6 +58,7 @@ export function MainHeader({
         <button
           className="inline-flex h-9 w-9 items-center justify-center rounded-md text-white transition-colors hover:bg-white/10 lg:hidden"
           onClick={onMenuOpen}
+          aria-label="เปิดเมนู"
         >
           <Menu className="h-5 w-5" />
         </button>
@@ -85,30 +81,22 @@ export function MainHeader({
           <span>Shop by Category</span>
         </button>
 
-        <form onSubmit={handleSearch} className="hidden flex-1 lg:flex">
-          <div className="relative w-full max-w-2xl">
-            <input
-              type="search"
-              placeholder="ค้นหาสินค้า..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg bg-white py-2.5 pl-5 pr-12 text-sm text-slate-800 outline-none placeholder:text-slate-400"
-            />
-            <button
-              type="submit"
-              className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-slate-500 transition-colors hover:text-primary"
-            >
-              <Search className="h-4 w-4" />
-            </button>
-          </div>
-        </form>
+        <Suspense fallback={null}>
+          <MainHeaderSearch className="hidden max-w-2xl flex-1 lg:flex" />
+        </Suspense>
 
         <div className="ml-auto flex items-center gap-2 lg:gap-3">
           <button
             className="inline-flex h-9 w-9 items-center justify-center rounded-md text-white transition-colors hover:bg-white/10 lg:hidden"
-            onClick={() => router.push("/categories?search=")}
+            onClick={() => setMobileSearchOpen((open) => !open)}
+            aria-label={mobileSearchOpen ? "ปิดช่องค้นหา" : "ค้นหาสินค้า"}
+            aria-expanded={mobileSearchOpen}
           >
-            <Search className="h-5 w-5" />
+            {mobileSearchOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Search className="h-5 w-5" />
+            )}
           </button>
 
           <Link
@@ -120,9 +108,7 @@ export function MainHeader({
             </div>
             <div className="leading-tight">
               <span className="block text-[11px] text-white/70">โทรสั่งสินค้า</span>
-              <span className="block text-xs font-semibold">
-                {storePhone}
-              </span>
+              <span className="block text-xs font-semibold">{storePhone}</span>
             </div>
           </Link>
 
@@ -190,6 +176,17 @@ export function MainHeader({
           </button>
         </div>
       </div>
+
+      {mobileSearchOpen && (
+        <div className="border-t border-white/10 px-4 pb-3 lg:hidden">
+          <Suspense fallback={null}>
+            <MainHeaderSearch
+              autoFocus
+              onSubmitted={() => setMobileSearchOpen(false)}
+            />
+          </Suspense>
+        </div>
+      )}
     </div>
   );
 }

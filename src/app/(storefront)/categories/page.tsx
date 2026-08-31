@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCategories, getProducts } from "@/lib/api/products";
 import { ProductCard } from "@/components/product/product-card";
+import { CategoriesSearchSection } from "@/components/product/categories-search-section";
 import {
   ProductPagination,
   STOREFRONT_PAGE_SIZE,
@@ -25,14 +26,7 @@ export default async function CategoriesPage({
 
     return (
       <div className="mx-auto max-w-6xl px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">
-            ผลการค้นหา &ldquo;{query}&rdquo;
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            พบ {total.toLocaleString()} รายการ
-          </p>
-        </div>
+        <CategoriesSearchSection query={query} total={total} showResultsHeading />
 
         {total === 0 ? (
           <div className="rounded-2xl border border-dashed bg-slate-50 px-6 py-14 text-center">
@@ -70,6 +64,8 @@ export default async function CategoriesPage({
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
+      <CategoriesSearchSection />
+
       <h1 className="mb-6 text-2xl font-bold text-foreground">หมวดหมู่ทั้งหมด</h1>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">

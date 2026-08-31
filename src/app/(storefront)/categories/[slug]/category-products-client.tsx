@@ -3,9 +3,9 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { ChevronRight, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ProductSearchBar } from "@/components/product/product-search-bar";
 import {
   Select,
   SelectContent,
@@ -49,7 +49,6 @@ export function CategoryProductsClient({
 }: CategoryProductsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [searchInput, setSearchInput] = useState(currentSearch);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const updateParams = useCallback(
@@ -70,11 +69,6 @@ export function CategoryProductsClient({
     [router, searchParams, category.slug]
   );
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    updateParams({ search: searchInput });
-  };
-
   const handleSubcategoryClick = (subSlug: string) => {
     updateParams({ sub: currentSub === subSlug ? "" : subSlug });
     setMobileFilterOpen(false);
@@ -89,7 +83,6 @@ export function CategoryProductsClient({
   };
 
   const clearFilters = () => {
-    setSearchInput("");
     router.push(`/categories/${category.slug}`);
   };
 
@@ -155,27 +148,13 @@ export function CategoryProductsClient({
 
       {/* Search + Sort + Mobile filter toggle */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <form onSubmit={handleSearch} className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="ค้นหาสินค้า..."
-            className="h-9 pl-9 pr-9"
-          />
-          {searchInput && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchInput("");
-                updateParams({ search: "" });
-              }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </form>
+        <ProductSearchBar
+          initialQuery={currentSearch}
+          categorySlug={category.slug}
+          onSearch={(query) => updateParams({ search: query })}
+          className="relative flex-1"
+          inputClassName="h-9"
+        />
 
         <div className="flex items-center gap-2">
           {/* Mobile filter button */}

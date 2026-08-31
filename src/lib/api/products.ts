@@ -60,6 +60,39 @@ export async function getProducts(params?: {
   };
 }
 
+export async function searchProductSuggestions(
+  query: string,
+  options?: {
+    categorySlug?: string;
+    limit?: number;
+    signal?: AbortSignal;
+  },
+): Promise<{ products: Product[]; total: number }> {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return { products: [], total: 0 };
+  }
+
+  const response = await apiGet<BackendProduct[]>("/products", {
+    searchParams: {
+      search: trimmed,
+      categorySlug: options?.categorySlug,
+      limit: options?.limit ?? 8,
+      page: 1,
+    },
+    signal: options?.signal,
+  });
+
+  if (!response.success) {
+    return { products: [], total: 0 };
+  }
+
+  return {
+    products: response.data.map(mapProduct),
+    total: response.meta?.total ?? response.data.length,
+  };
+}
+
 /**
  * Load products for a storefront category page.
  * Live API keeps inventory on leaf categories — use includeDescendants (one
