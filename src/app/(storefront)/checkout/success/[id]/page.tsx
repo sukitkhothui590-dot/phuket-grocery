@@ -148,7 +148,7 @@ export default function CheckoutSuccessPage() {
             )}
           >
             <FileText className="size-4" />
-            เปิดใบเสร็จรับเงิน
+            เปิดใบสั่งซื้อ
           </Link>
           <a
             href={toTelHref(COMPANY_INFO.phone)}

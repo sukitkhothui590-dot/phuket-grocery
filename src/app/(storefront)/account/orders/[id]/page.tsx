@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { OrderDeliveryTracker } from "@/components/order/order-delivery-tracker";
 import { useAuthStore } from "@/stores/auth-store";
 import { cancelOrder, getOrderById, uploadOrderSlip } from "@/lib/api/orders";
-import { uploadFile } from "@/lib/api/upload";
+import { uploadCustomerFile } from "@/lib/api/upload";
 import { getStoreSettings } from "@/lib/api/settings";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import { ORDER_STATUS_CONFIG, ORDER_STATUS_FLOW } from "@/lib/order-status";
@@ -127,7 +127,7 @@ export default function OrderDetailPage() {
 
     setUploadingSlip(true);
 
-    const uploadResult = await uploadFile(file, accessToken);
+    const uploadResult = await uploadCustomerFile(file, accessToken);
     if (!uploadResult.success || !uploadResult.url) {
       setUploadingSlip(false);
       alert(uploadResult.error ?? "อัปโหลดสลิปไม่สำเร็จ");
@@ -190,7 +190,10 @@ export default function OrderDetailPage() {
   }
 
   const status = ORDER_STATUS_CONFIG[order.status];
-  const isCancelled = order.status === "cancelled";
+  // ponytail: return statuses are terminal too — hide the linear stepper for them.
+  const isCancelled = ["cancelled", "return_requested", "returned"].includes(
+    order.status
+  );
   const showDeliveryTracker =
     order.status === "preparing" || order.status === "shipped";
 
@@ -229,7 +232,7 @@ export default function OrderDetailPage() {
                 <Link href={`/account/orders/${order.id}/receipt`}>
                   <Button variant="outline" className="gap-2 rounded-full">
                     <FileText className="h-4 w-4" />
-                    ใบเสร็จรับเงิน
+                    ใบสั่งซื้อ
                   </Button>
                 </Link>
               </div>

@@ -146,9 +146,9 @@ export function SalesReceipt({ order }: SalesReceiptProps) {
 
           <div className="shrink-0 text-right">
             <h1 className="text-lg font-bold uppercase leading-tight tracking-wide">
-              Official Receipt
+              Purchase Order
             </h1>
-            <p className="text-sm font-semibold">ใบเสร็จรับเงิน</p>
+            <p className="text-sm font-semibold">ใบสั่งซื้อ</p>
             <dl className="mt-2 space-y-1 text-[11px]">
               <div className="flex justify-end gap-2">
                 <dt className="text-neutral-500">No.</dt>
@@ -317,7 +317,7 @@ export function SalesReceipt({ order }: SalesReceiptProps) {
             <span className="font-semibold">
               {formatMoney(order.total)} บาท
             </span>{" "}
-            สำหรับรายการตามใบเสร็จนี้
+            สำหรับรายการตามใบสั่งซื้อนี้
             {order.paymentMethod === "cod" ? " (ชำระเมื่อรับสินค้า / COD)" : ""}
           </p>
         </div>
