@@ -23,7 +23,7 @@ import {
   type ReviewEligibilityReason,
 } from "@/lib/api/reviews";
 import { DEFAULT_RATING } from "@/components/product/product-rating";
-import { uploadFile } from "@/lib/api/upload";
+import { uploadCustomerFile } from "@/lib/api/upload";
 import { useAuthStore } from "@/stores/auth-store";
 
 interface ProductReviewsProps {
@@ -187,7 +187,7 @@ export function ProductReviews({ productSlug }: ProductReviewsProps) {
 
     const imageUrls: string[] = [];
     for (const file of imageFiles) {
-      const uploadResult = await uploadFile(file, accessToken);
+      const uploadResult = await uploadCustomerFile(file, accessToken);
       if (uploadResult.success && uploadResult.url) {
         imageUrls.push(uploadResult.url);
       }
