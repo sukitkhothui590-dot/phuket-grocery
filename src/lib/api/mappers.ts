@@ -427,6 +427,10 @@ function mapOrderStatus(status: string): OrderStatus {
       return "delivered";
     case "cancelled":
       return "cancelled";
+    case "return_requested":
+      return "return_requested";
+    case "returned":
+      return "returned";
     default:
       return "pending_payment";
   }

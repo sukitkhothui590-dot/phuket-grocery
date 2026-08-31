@@ -6,7 +6,9 @@ export type OrderStatus =
   | "preparing"
   | "shipped"
   | "delivered"
-  | "cancelled";
+  | "cancelled"
+  | "return_requested"
+  | "returned";
 
 export type PaymentMethod = "bank_transfer" | "cod";
 
