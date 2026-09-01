@@ -229,12 +229,14 @@ export default function OrderDetailPage() {
                 >
                   {status.label}
                 </span>
-                <Link href={`/account/orders/${order.id}/receipt`}>
-                  <Button variant="outline" className="gap-2 rounded-full">
-                    <FileText className="h-4 w-4" />
-                    ใบสั่งซื้อ
-                  </Button>
-                </Link>
+                {order.receiptReleased && (
+                  <Link href={`/account/orders/${order.id}/receipt`}>
+                    <Button variant="outline" className="gap-2 rounded-full">
+                      <FileText className="h-4 w-4" />
+                      ใบสั่งซื้อ
+                    </Button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>

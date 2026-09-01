@@ -181,6 +181,8 @@ interface BackendOrder {
   province?: string;
   postalCode?: string;
   note?: string | null;
+  receiptReleased?: boolean;
+  receiptReleasedAt?: string | null;
   createdAt: string;
   updatedAt?: string;
 }
@@ -552,6 +554,8 @@ export function mapOrder(order: BackendOrder): Order {
     paymentFee,
     subtotal,
     total: reportedTotal,
+    receiptReleased: order.receiptReleased === true,
+    receiptReleasedAt: order.receiptReleasedAt ?? undefined,
     createdAt: order.createdAt,
     updatedAt: order.updatedAt ?? order.createdAt,
   };

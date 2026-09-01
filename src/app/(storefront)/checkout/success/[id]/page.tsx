@@ -33,17 +33,8 @@ export default function CheckoutSuccessPage() {
   const [order, setOrder] = useState<Order | null>(null);
 
   useEffect(() => {
+    // ponytail: API only — a cached order carries a stale `receiptReleased`.
     async function load() {
-      try {
-        const stored = sessionStorage.getItem(`order-${id}`);
-        if (stored) {
-          setOrder(JSON.parse(stored));
-          return;
-        }
-      } catch {
-        /* sessionStorage unavailable */
-      }
-
       const apiOrder = await getOrderById(id, getAccessToken());
       if (apiOrder) setOrder(apiOrder);
     }
@@ -140,16 +131,18 @@ export default function CheckoutSuccessPage() {
         )}
 
         <div className="mt-6 flex flex-col gap-2">
-          <Link
-            href={`/account/orders/${id}/receipt`}
-            className={cn(
-              buttonVariants({ variant: "default" }),
-              "h-11 gap-2 rounded-xl",
-            )}
-          >
-            <FileText className="size-4" />
-            เปิดใบสั่งซื้อ
-          </Link>
+          {order?.receiptReleased && (
+            <Link
+              href={`/account/orders/${id}/receipt`}
+              className={cn(
+                buttonVariants({ variant: "default" }),
+                "h-11 gap-2 rounded-xl",
+              )}
+            >
+              <FileText className="size-4" />
+              เปิดใบสั่งซื้อ
+            </Link>
+          )}
           <a
             href={toTelHref(COMPANY_INFO.phone)}
             className={cn(
