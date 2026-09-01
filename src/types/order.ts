@@ -41,6 +41,13 @@ export interface Order {
   paymentFee?: number;
   subtotal: number;
   total: number;
+  /**
+   * Staff released the official receipt document. Never inferred from `status` —
+   * a `preparing` order is not an approved receipt. Optional so it fails closed:
+   * anything that did not come from the API is treated as not released.
+   */
+  receiptReleased?: boolean;
+  receiptReleasedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

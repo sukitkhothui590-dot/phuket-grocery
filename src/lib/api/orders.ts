@@ -33,6 +33,45 @@ export async function getOrderById(
   return mapOrder(response.data);
 }
 
+/**
+ * Official receipt document. The gate lives on the server: `/orders/:id/receipt`
+ * returns 403 RECEIPT_PENDING until staff release it, and withholds the line
+ * items entirely — so a held receipt cannot be reconstructed on the client.
+ * Anything other than a 200 resolves to a non-`released` state (fails closed).
+ */
+export type OrderReceiptResult =
+  | { state: "released"; order: Order }
+  | { state: "pending"; orderNumber?: string; status?: string }
+  | { state: "unavailable" };
+
+export async function getOrderReceipt(
+  id: string,
+  token?: string | null,
+): Promise<OrderReceiptResult> {
+  if (!token) {
+    return { state: "unavailable" };
+  }
+
+  const response = await apiGet<BackendOrder>(`/orders/${id}/receipt`, { token });
+
+  if (response.success) {
+    return { state: "released", order: mapOrder(response.data) };
+  }
+
+  if (response.error.code === "RECEIPT_PENDING") {
+    const details = response.error.details as
+      | { orderNumber?: string; status?: string }
+      | undefined;
+    return {
+      state: "pending",
+      orderNumber: details?.orderNumber,
+      status: details?.status,
+    };
+  }
+
+  return { state: "unavailable" };
+}
+
 export async function getOrderByNumber(
   orderNumber: string,
   token?: string | null,

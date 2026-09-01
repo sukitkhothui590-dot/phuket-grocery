@@ -17,6 +17,7 @@ export interface ApiFailure {
   error: {
     code: string;
     message: string;
+    details?: unknown;
   };
 }
 
