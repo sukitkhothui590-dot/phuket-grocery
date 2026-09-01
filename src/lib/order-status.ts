@@ -52,6 +52,18 @@ export const ORDER_STATUS_CONFIG: Record<
     description: "คำสั่งซื้อถูกยกเลิกและไม่มีการจัดส่งต่อ",
     colorClass: "bg-rose-50 text-rose-700 ring-1 ring-rose-200",
   },
+  return_requested: {
+    label: "รอตรวจสอบการคืนสินค้า",
+    shortLabel: "ขอคืนสินค้า",
+    description: "ลูกค้าแจ้งขอคืนสินค้า และร้านค้ากำลังตรวจสอบคำขอ",
+    colorClass: "bg-purple-50 text-purple-700 ring-1 ring-purple-200",
+  },
+  returned: {
+    label: "คืนสินค้าแล้ว",
+    shortLabel: "คืนสินค้าแล้ว",
+    description: "ร้านค้ารับคืนสินค้าเรียบร้อยแล้ว",
+    colorClass: "bg-slate-100 text-slate-700 ring-1 ring-slate-200",
+  },
 };
 
 export const ORDER_STATUS_FLOW: OrderStatus[] = [
@@ -90,7 +102,7 @@ export const ORDER_STATUS_GROUPS: Array<{
   {
     value: "cancelled",
     label: "ยกเลิก",
-    description: "คำสั่งซื้อที่ถูกยกเลิก",
+    description: "คำสั่งซื้อที่ถูกยกเลิกหรือคืนสินค้า",
   },
 ];
 
@@ -107,7 +119,9 @@ export function matchesOrderGroup(order: Order, group: OrderStatusGroup) {
     case "completed":
       return order.status === "delivered";
     case "cancelled":
-      return order.status === "cancelled";
+      return ["cancelled", "return_requested", "returned"].includes(
+        order.status
+      );
     default:
       return false;
   }

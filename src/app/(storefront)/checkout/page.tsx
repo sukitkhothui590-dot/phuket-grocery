@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
 import { syncCartToServer } from "@/lib/api/cart";
-import { uploadFile } from "@/lib/api/upload";
+import { uploadCustomerFile } from "@/lib/api/upload";
 import { createAddress } from "@/lib/api/addresses";
 import { checkout } from "@/lib/api/orders";
 import { getStoreSettings } from "@/lib/api/settings";
@@ -399,7 +399,7 @@ export default function CheckoutPage() {
       let transferredAt: string | undefined;
 
       if (paymentMethod === "bank_transfer" && slipFile) {
-        const uploadResult = await uploadFile(slipFile, accessToken);
+        const uploadResult = await uploadCustomerFile(slipFile, accessToken);
         if (!uploadResult.success || !uploadResult.url) {
           alert(uploadResult.error ?? "อัปโหลดสลิปไม่สำเร็จ");
           return;

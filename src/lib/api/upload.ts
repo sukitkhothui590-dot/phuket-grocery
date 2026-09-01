@@ -3,7 +3,7 @@ import type { ApiResponse } from "@/lib/api/client";
 import { resolveMediaUrl } from "@/lib/api/media";
 
 function buildUploadUrl(path: string) {
-  // POST /backend/uploads (Nest controller under global prefix)
+  // POST /backend/uploads/... (Nest controller under global prefix)
   const base = getApiBaseUrl().replace(/\/$/, "");
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const target = `${base}${normalizedPath}`;
@@ -17,52 +17,24 @@ function buildUploadUrl(path: string) {
     : new URL(target, origin).toString();
 }
 
-async function uploadViaStorefront(
-  file: File,
-  token: string,
-): Promise<{ success: boolean; url?: string; error?: string }> {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch("/api/upload-slip", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: formData,
-  });
-
-  const payload = (await response.json()) as ApiResponse<{
-    url?: string;
-    path?: string;
-  }>;
-
-  if (!payload.success) {
-    return {
-      success: false,
-      error: payload.error?.message ?? "อัปโหลดสลิปไม่สำเร็จ",
-    };
-  }
-
-  return {
-    success: true,
-    url: payload.data.url ?? payload.data.path,
-  };
-}
-
 /**
- * Upload an image. Prefers backend `/uploads`, but CUSTOMER role is currently
- * forbidden there — fall back to storefront slip storage for checkout.
+ * Upload an image to the backend volume.
+ *
+ * `POST /uploads` is ADMIN-only, so anything a shopper uploads (payment slips,
+ * review photos) goes to `POST /uploads/customer`. There is deliberately no
+ * storefront-disk fallback: it wrote files the backoffice could never read and
+ * lost them on redeploy.
  */
 export async function uploadFile(
   file: File,
   token: string,
+  options?: { endpoint?: "/uploads" | "/uploads/customer" },
 ): Promise<{ success: boolean; url?: string; error?: string }> {
   const formData = new FormData();
   formData.append("file", file);
 
   try {
-    const response = await fetch(buildUploadUrl("/uploads"), {
+    const response = await fetch(buildUploadUrl(options?.endpoint ?? "/uploads"), {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -85,22 +57,16 @@ export async function uploadFile(
       return { success: true, url: raw ? resolveMediaUrl(raw) : undefined };
     }
 
-    const code = payload.error?.code;
-    const message = payload.error?.message ?? "";
-    const needsFallback =
-      code === "FORBIDDEN" ||
-      /insufficient permissions/i.test(message) ||
-      response.status === 403;
-
-    if (needsFallback) {
-      return uploadViaStorefront(file, token);
-    }
-
     return {
       success: false,
-      error: message || "อัปโหลดไฟล์ไม่สำเร็จ",
+      error: payload.error?.message ?? "อัปโหลดไฟล์ไม่สำเร็จ",
     };
   } catch {
-    return uploadViaStorefront(file, token);
+    return { success: false, error: "อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง" };
   }
+}
+
+/** Slips and review photos — the customer-accessible endpoint. */
+export function uploadCustomerFile(file: File, token: string) {
+  return uploadFile(file, token, { endpoint: "/uploads/customer" });
 }

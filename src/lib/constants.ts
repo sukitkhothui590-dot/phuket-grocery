@@ -83,6 +83,8 @@ export const ORDER_STATUS_MAP: Record<
   shipped: { label: "จัดส่งแล้ว", color: "bg-indigo-100 text-indigo-800" },
   delivered: { label: "ส่งสำเร็จ", color: "bg-green-100 text-green-800" },
   cancelled: { label: "ยกเลิก", color: "bg-red-100 text-red-800" },
+  return_requested: { label: "ขอคืนสินค้า", color: "bg-purple-100 text-purple-800" },
+  returned: { label: "คืนสินค้าแล้ว", color: "bg-slate-100 text-slate-800" },
 };
 
 export const SHIPPING_COST = {
