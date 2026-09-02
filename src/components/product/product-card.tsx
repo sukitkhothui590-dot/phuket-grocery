@@ -24,6 +24,8 @@ export function ProductCard({ product, sourceLabel }: ProductCardProps) {
 
   if (!displayUnit) return null;
 
+  const outOfStock = displayUnit.stock <= 0;
+
   const hasDiscount =
     !!displayUnit.compareAtPrice &&
     displayUnit.compareAtPrice > displayUnit.price;
@@ -100,8 +102,15 @@ export function ProductCard({ product, sourceLabel }: ProductCardProps) {
         <img
           src={product.images[0]}
           alt={product.name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className={`h-full w-full object-cover transition-transform duration-300 group-hover:scale-105 ${
+            outOfStock ? "opacity-45 grayscale" : ""
+          }`}
         />
+        {outOfStock && (
+          <span className="absolute inset-x-0 top-1/2 -translate-y-1/2 bg-slate-900/70 py-1.5 text-center text-xs font-bold text-white">
+            สินค้าหมด
+          </span>
+        )}
       </Link>
 
       <div className="flex flex-1 flex-col p-3">
@@ -145,13 +154,18 @@ export function ProductCard({ product, sourceLabel }: ProductCardProps) {
           type="button"
           data-testid="add-to-cart"
           onClick={handleAddToCart}
-          className={`mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-bold text-white shadow-sm transition-all active:scale-[0.98] ${
-            added
-              ? "bg-green-600 hover:bg-green-600"
-              : "bg-primary hover:bg-primary/90"
+          disabled={outOfStock}
+          className={`mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-bold shadow-sm transition-all active:scale-[0.98] ${
+            outOfStock
+              ? "cursor-not-allowed bg-slate-200 text-slate-500 shadow-none active:scale-100"
+              : added
+                ? "bg-green-600 text-white hover:bg-green-600"
+                : "bg-primary text-white hover:bg-primary/90"
           }`}
         >
-          {added ? (
+          {outOfStock ? (
+            "สินค้าหมด · รอสินค้าเข้า"
+          ) : added ? (
             <>
               <Check className="h-4 w-4" strokeWidth={2.5} />
               เพิ่มแล้ว

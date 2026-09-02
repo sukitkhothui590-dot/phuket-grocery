@@ -13,6 +13,7 @@ import {
   Share2,
   Heart,
   Check,
+  PackageX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ import {
   stripHtml,
 } from "@/lib/html";
 import { getPlaceholderUrl } from "@/lib/placeholder";
+import { isOutOfStock } from "@/lib/product-promo";
 import type { Product, ProductUnit } from "@/types";
 
 interface ProductDetailClientProps {
@@ -55,6 +57,9 @@ export function ProductDetailClient({
   const [canScrollThumbLeft, setCanScrollThumbLeft] = useState(false);
   const [canScrollThumbRight, setCanScrollThumbRight] = useState(false);
   const thumbStripRef = useRef<HTMLDivElement>(null);
+
+  const unitOutOfStock = selectedUnit.stock <= 0;
+  const productOutOfStock = isOutOfStock(product);
 
   const baseImages =
     product.images.length > 0
@@ -388,13 +393,18 @@ export function ProductDetailClient({
 
           {/* Stock */}
           <div className="mt-3 flex items-center gap-2">
-            {selectedUnit.stock > 0 ? (
+            {!unitOutOfStock ? (
               <span className="flex items-center gap-1 text-sm text-green-600">
                 <Check className="h-3.5 w-3.5" />
                 มีสินค้า ({selectedUnit.stock} {selectedUnit.labelTh})
               </span>
             ) : (
-              <span className="text-sm text-red-500">สินค้าหมด</span>
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-red-50 px-2.5 py-1 text-sm font-semibold text-red-600 ring-1 ring-red-200">
+                <PackageX className="h-4 w-4" />
+                {productOutOfStock
+                  ? "สินค้าหมด · รอสินค้าเข้า"
+                  : `หมดเฉพาะหน่วย "${selectedUnit.labelTh}" · เลือกหน่วยอื่นได้`}
+              </span>
             )}
           </div>
 
@@ -434,10 +444,14 @@ export function ProductDetailClient({
                 addedFeedback && "bg-green-600 hover:bg-green-600"
               )}
               onClick={handleAddToCart}
-              disabled={selectedUnit.stock <= 0}
+              disabled={unitOutOfStock}
             >
               <ShoppingCart className="h-4 w-4" />
-              {addedFeedback ? "เพิ่มแล้ว ✓" : "เพิ่มลงตะกร้า"}
+              {unitOutOfStock
+                ? "สินค้าหมด"
+                : addedFeedback
+                  ? "เพิ่มแล้ว ✓"
+                  : "เพิ่มลงตะกร้า"}
             </Button>
 
             <Button
@@ -445,9 +459,9 @@ export function ProductDetailClient({
               size="lg"
               className="gap-2 border-primary px-8 text-primary hover:bg-primary/5"
               onClick={handleAddToCart}
-              disabled={selectedUnit.stock <= 0}
+              disabled={unitOutOfStock}
             >
-              ซื้อเลย
+              {unitOutOfStock ? "รอสินค้าเข้า" : "ซื้อเลย"}
             </Button>
 
             <Button
@@ -572,7 +586,9 @@ export function ProductDetailClient({
                       สต็อก
                     </td>
                     <td className="px-4 py-2.5 text-muted-foreground">
-                      {selectedUnit.stock} {selectedUnit.labelTh}
+                      {unitOutOfStock
+                        ? "สินค้าหมด · รอสินค้าเข้า"
+                        : `${selectedUnit.stock} ${selectedUnit.labelTh}`}
                     </td>
                   </tr>
                 </tbody>

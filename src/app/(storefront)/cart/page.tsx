@@ -423,8 +423,8 @@ export default function CartPage() {
                         </p>
                       )}
                       {item.selectedUnit.stock <= 0 && (
-                        <p className="mt-2 text-xs text-[#ee4d2d]">
-                          สินค้าหมดสต็อก
+                        <p className="mt-2 inline-flex items-center rounded-sm bg-red-50 px-2 py-1 text-xs font-semibold text-[#ee4d2d] ring-1 ring-[#ee4d2d]/20">
+                          สินค้าหมด · รอสินค้าเข้า (กรุณาลบออกก่อนสั่งซื้อ)
                         </p>
                       )}
                     </div>
@@ -496,7 +496,7 @@ export default function CartPage() {
                           )
                         }
                         disabled={
-                          item.selectedUnit.stock > 0 &&
+                          item.selectedUnit.stock <= 0 ||
                           item.quantity >= item.selectedUnit.stock
                         }
                         className="flex h-9 w-9 items-center justify-center border border-slate-300 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"

@@ -14,16 +14,19 @@ export function UnitSelector({ units, selectedSku, onChange }: UnitSelectorProps
     <div className="flex flex-wrap gap-2">
       {units.map((unit) => {
         const isSelected = unit.sku === selectedSku;
+        const soldOut = unit.stock <= 0;
         return (
           <button
             key={unit.sku}
             type="button"
+            // Still selectable when sold out so the detail panel can explain why.
             onClick={() => onChange(unit)}
             className={cn(
               "flex flex-col items-center rounded-lg border px-4 py-2.5 text-sm transition-all",
               isSelected
                 ? "border-primary bg-primary/5 text-primary ring-1 ring-primary"
-                : "border-border bg-white text-muted-foreground hover:border-primary/40 hover:bg-primary/[0.02]"
+                : "border-border bg-white text-muted-foreground hover:border-primary/40 hover:bg-primary/[0.02]",
+              soldOut && !isSelected && "opacity-60"
             )}
           >
             <span className="font-medium">{unit.labelTh}</span>
@@ -33,6 +36,11 @@ export function UnitSelector({ units, selectedSku, onChange }: UnitSelectorProps
             {unit.compareAtPrice && unit.compareAtPrice > unit.price && (
               <span className="mt-0.5 text-[11px] text-muted-foreground line-through">
                 ฿{unit.compareAtPrice.toLocaleString()}
+              </span>
+            )}
+            {soldOut && (
+              <span className="mt-0.5 text-[11px] font-semibold text-red-500">
+                หมด
               </span>
             )}
           </button>

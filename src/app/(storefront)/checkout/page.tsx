@@ -372,6 +372,14 @@ export default function CheckoutPage() {
       return;
     }
 
+    const soldOut = items.find((item) => item.selectedUnit.stock <= 0);
+    if (soldOut) {
+      alert(
+        `"${soldOut.productName}" สินค้าหมด · รอสินค้าเข้า กรุณาลบออกจากตะกร้าก่อนสั่งซื้อ`,
+      );
+      return;
+    }
+
     const overstock = items.find(
       (item) =>
         item.selectedUnit.stock > 0 && item.quantity > item.selectedUnit.stock,

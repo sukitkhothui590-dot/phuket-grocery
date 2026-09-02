@@ -68,7 +68,10 @@ test("customer adds a product to the cart and reaches checkout", async ({ page }
   await login(page);
 
   await page.goto("/");
-  const addToCart = page.getByTestId("add-to-cart").first();
+  // Sold-out cards render the same testid but disabled — pick a buyable one.
+  const addToCart = page
+    .locator('[data-testid="add-to-cart"]:not([disabled])')
+    .first();
   await addToCart.waitFor({ state: "visible" });
   await addToCart.click();
   // The button flips to "เพิ่มแล้ว" only after the store accepts the item.
