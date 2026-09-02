@@ -16,7 +16,11 @@ export function getBestPromoUnit(product: Product): ProductUnit | null {
 
 /** Prefer the best discounted unit; fall back to the first catalog unit. */
 export function getDisplayUnit(product: Product): ProductUnit | undefined {
-  return getBestPromoUnit(product) ?? product.units[0];
+  const promo = getBestPromoUnit(product);
+  if (promo && promo.stock > 0) return promo;
+  // A sold-out promo unit (e.g. the last ลัง) must not make a product with
+  // plenty of base units on the shelf render as out of stock.
+  return product.units.find((unit) => unit.stock > 0) ?? promo ?? product.units[0];
 }
 
 export function getPromoDetails(unit: ProductUnit) {
@@ -41,4 +45,13 @@ export function getPromoDetails(unit: ProductUnit) {
 
 export function hasPromo(product: Product): boolean {
   return getBestPromoUnit(product) !== null;
+}
+
+/**
+ * Out of stock = every sellable unit is at zero. The base unit always holds the
+ * largest count (unit stock = floor(available / conversionRate)), so this is
+ * equivalent to "base unit empty" but survives odd unit ordering from the API.
+ */
+export function isOutOfStock(product: Product): boolean {
+  return product.units.every((unit) => unit.stock <= 0);
 }
