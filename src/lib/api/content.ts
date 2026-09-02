@@ -213,17 +213,3 @@ export async function submitContactMessage(data: {
   return { success: true };
 }
 
-export async function subscribeNewsletter(
-  email: string,
-): Promise<{ success: boolean; error?: string }> {
-  const response = await apiPost("/public/newsletter/subscribe", { email });
-
-  if (!response.success) {
-    return {
-      success: false,
-      error: response.error.message || "ไม่สามารถสมัครรับข่าวสารได้",
-    };
-  }
-
-  return { success: true };
-}
