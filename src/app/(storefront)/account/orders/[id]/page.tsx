@@ -19,6 +19,7 @@ import { OrderDeliveryTracker } from "@/components/order/order-delivery-tracker"
 import { useAuthStore } from "@/stores/auth-store";
 import { cancelOrder, getOrderById, uploadOrderSlip } from "@/lib/api/orders";
 import { uploadCustomerFile } from "@/lib/api/upload";
+import { getAccessToken } from "@/lib/api/token";
 import { getStoreSettings } from "@/lib/api/settings";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import { ORDER_STATUS_CONFIG, ORDER_STATUS_FLOW } from "@/lib/order-status";
@@ -48,6 +49,21 @@ function formatAddress(order: Order) {
     .join(", ");
 }
 
+function getNowDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getNowTimeString() {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -57,8 +73,8 @@ export default function OrderDetailPage() {
   const [cancelling, setCancelling] = useState(false);
   const [uploadingSlip, setUploadingSlip] = useState(false);
   const [bankAccountInfo, setBankAccountInfo] = useState("");
-  const [transferDate, setTransferDate] = useState("");
-  const [transferTime, setTransferTime] = useState("");
+  const [transferDate, setTransferDate] = useState(getNowDateString);
+  const [transferTime, setTransferTime] = useState(getNowTimeString);
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) {
@@ -117,28 +133,28 @@ export default function OrderDetailPage() {
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
-    if (!file || !order || !accessToken || !canUploadSlip) return;
+    const activeToken = accessToken || getAccessToken() || "";
+    if (!file || !order || !activeToken || !canUploadSlip) return;
 
-    if (!transferDate || !transferTime) {
-      alert("กรุณาระบุวันที่และเวลาโอนก่อนอัปโหลดสลิป");
-      event.target.value = "";
-      return;
-    }
+    const dateToUse = transferDate || getNowDateString();
+    const timeToUse = transferTime || getNowTimeString();
+    if (!transferDate) setTransferDate(dateToUse);
+    if (!transferTime) setTransferTime(timeToUse);
 
     setUploadingSlip(true);
 
-    const uploadResult = await uploadCustomerFile(file, accessToken);
+    const uploadResult = await uploadCustomerFile(file, activeToken);
     if (!uploadResult.success || !uploadResult.url) {
       setUploadingSlip(false);
       alert(uploadResult.error ?? "อัปโหลดสลิปไม่สำเร็จ");
       return;
     }
 
-    const result = await uploadOrderSlip(accessToken, order.id, {
+    const result = await uploadOrderSlip(activeToken, order.id, {
       paymentSlipUrl: uploadResult.url,
       paymentAmount: order.total,
-      transferDate,
-      transferTime,
+      transferDate: dateToUse,
+      transferTime: timeToUse,
     });
 
     setUploadingSlip(false);
@@ -418,24 +434,30 @@ export default function OrderDetailPage() {
                           </p>
                         )}
                         <div className="grid gap-2 sm:grid-cols-2">
-                          <Input
-                            type="date"
-                            value={transferDate}
-                            onChange={(event) =>
-                              setTransferDate(event.target.value)
-                            }
-                          />
-                          <Input
-                            type="time"
-                            value={transferTime}
-                            onChange={(event) =>
-                              setTransferTime(event.target.value)
-                            }
-                          />
+                          <div>
+                            <label className="text-xs text-slate-500 mb-1 block">วันที่โอน</label>
+                            <Input
+                              type="date"
+                              value={transferDate}
+                              onChange={(event) =>
+                                setTransferDate(event.target.value)
+                              }
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-slate-500 mb-1 block">เวลาที่โอน</label>
+                            <Input
+                              type="time"
+                              value={transferTime}
+                              onChange={(event) =>
+                                setTransferTime(event.target.value)
+                              }
+                            />
+                          </div>
                         </div>
-                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-3 text-sm text-slate-600 hover:border-primary hover:text-primary">
+                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed px-4 py-3 text-sm text-slate-600 hover:border-primary hover:text-primary transition-colors">
                           <Upload className="h-4 w-4" />
-                          {uploadingSlip ? "กำลังอัปโหลด..." : "อัปโหลดสลิปการโอน"}
+                          <span>{uploadingSlip ? "กำลังอัปโหลด..." : "คลิกเพื่อเลือกรูปสลิปการโอน"}</span>
                           <input
                             type="file"
                             accept="image/*"

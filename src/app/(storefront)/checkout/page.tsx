@@ -26,6 +26,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useCartStore } from "@/stores/cart-store";
 import { syncCartToServer } from "@/lib/api/cart";
 import { uploadCustomerFile } from "@/lib/api/upload";
+import { getAccessToken } from "@/lib/api/token";
 import { createAddress } from "@/lib/api/addresses";
 import { checkout } from "@/lib/api/orders";
 import { getStoreSettings } from "@/lib/api/settings";
@@ -53,6 +54,21 @@ function formatAddress(address: Address) {
 
 function getDeliveryWindow(method: ShippingMethod) {
   return method === "express" ? "วันนี้ - พรุ่งนี้" : "1 - 2 วันทำการ";
+}
+
+function getNowDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getNowTimeString() {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
 }
 
 export default function CheckoutPage() {
@@ -175,11 +191,7 @@ export default function CheckoutPage() {
   const amountToFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
   const qualifiesForFreeShipping = subtotal >= freeShippingThreshold;
 
-  const canSubmit =
-    !!selectedAddress &&
-    items.length > 0 &&
-    (paymentMethod === "cod" ||
-      (!!slipPreview && !!transferDate && !!transferTime));
+  const canSubmit = !!selectedAddress && items.length > 0;
 
   const groupedItems = useMemo(
     () => [
@@ -205,6 +217,16 @@ export default function CheckoutPage() {
     if (file) {
       setSlipFile(file);
       setSlipPreview(URL.createObjectURL(file));
+      if (!transferDate) setTransferDate(getNowDateString());
+      if (!transferTime) setTransferTime(getNowTimeString());
+    }
+  };
+
+  const handleRemoveSlip = () => {
+    setSlipFile(null);
+    if (slipPreview) {
+      URL.revokeObjectURL(slipPreview);
+      setSlipPreview(null);
     }
   };
 
@@ -406,24 +428,26 @@ export default function CheckoutPage() {
       let paymentSlipUrl: string | undefined;
       let transferredAt: string | undefined;
 
+      const activeToken = accessToken || getAccessToken() || "";
+
       if (paymentMethod === "bank_transfer" && slipFile) {
-        const uploadResult = await uploadCustomerFile(slipFile, accessToken);
+        const uploadResult = await uploadCustomerFile(slipFile, activeToken);
         if (!uploadResult.success || !uploadResult.url) {
           alert(uploadResult.error ?? "อัปโหลดสลิปไม่สำเร็จ");
           return;
         }
         paymentSlipUrl = uploadResult.url;
 
-        if (transferDate && transferTime) {
-          const iso = new Date(`${transferDate}T${transferTime}:00`);
-          if (!Number.isNaN(iso.getTime())) {
-            transferredAt = iso.toISOString();
-          }
+        const effectiveDate = transferDate || getNowDateString();
+        const effectiveTime = transferTime || getNowTimeString();
+        const iso = new Date(`${effectiveDate}T${effectiveTime}:00`);
+        if (!Number.isNaN(iso.getTime())) {
+          transferredAt = iso.toISOString();
         }
       }
 
       await syncCartToServer(
-        accessToken,
+        activeToken,
         items.map((item) => ({
           unitId: item.selectedUnit.id ?? "",
           quantity: Math.min(
@@ -435,16 +459,20 @@ export default function CheckoutPage() {
         })),
       );
 
-      const result = await checkout(accessToken, {
+      const result = await checkout(activeToken, {
         paymentMethod,
         shippingMethod,
         paymentSlipUrl,
         paymentAmount: paymentMethod === "bank_transfer" ? total : undefined,
         transferredAt,
         transferDate:
-          paymentMethod === "bank_transfer" ? transferDate : undefined,
+          paymentMethod === "bank_transfer" && slipFile
+            ? (transferDate || getNowDateString())
+            : undefined,
         transferTime:
-          paymentMethod === "bank_transfer" ? transferTime : undefined,
+          paymentMethod === "bank_transfer" && slipFile
+            ? (transferTime || getNowTimeString())
+            : undefined,
         addressId: selectedAddress.id,
         recipientName: selectedAddress.fullName,
         phone: selectedAddress.phone,
@@ -1030,39 +1058,68 @@ export default function CheckoutPage() {
           {paymentMethod === "bank_transfer" && (
             <div className="border-b border-slate-100 px-6 py-5">
               {bankAccountInfo && (
-                <p className="mb-4 rounded-md bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                  โอนเข้าบัญชี: {bankAccountInfo}
-                </p>
+                <div className="mb-4 rounded-lg bg-blue-50/70 border border-blue-100 p-4 text-sm text-slate-700">
+                  <p className="font-semibold text-blue-900 mb-1">ข้อมูลบัญชีสำหรับโอนเงิน:</p>
+                  <p className="text-slate-800 whitespace-pre-line font-mono">{bankAccountInfo}</p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    * สามารถแนบสลิปตอนนี้ หรือสั่งซื้อก่อนแล้วแนบสลิปภายหลังได้ที่หน้ารายละเอียดคำสั่งซื้อ
+                  </p>
+                </div>
               )}
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-3 text-sm text-slate-700">
-                  <p className="font-medium text-foreground">อัปโหลดหลักฐานการโอน</p>
-                  <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-3 border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center text-sm text-slate-500 hover:border-primary/40 hover:text-primary">
-                    <Upload className="h-5 w-5" />
-                    <span>คลิกเพื่อเลือกสลิป</span>
-                    <input type="file" className="hidden" onChange={handleSlipUpload} />
-                  </label>
-                  {slipPreview && (
-                    <img
-                      src={slipPreview}
-                      alt="Slip preview"
-                      className="h-36 w-auto rounded border border-slate-200 object-cover"
-                    />
+                  <p className="font-medium text-foreground flex items-center justify-between">
+                    <span>อัปโหลดหลักฐานการโอน (สลิป)</span>
+                    <span className="text-xs text-muted-foreground font-normal">แนบตอนนี้หรือภายหลังได้</span>
+                  </p>
+                  {!slipPreview ? (
+                    <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-center text-sm text-slate-500 hover:border-primary/40 hover:text-primary transition-colors">
+                      <Upload className="h-5 w-5" />
+                      <span>คลิกเพื่อเลือกรูปสลิป</span>
+                      <span className="text-xs text-muted-foreground">รองรับรูปภาพทุกประเภท JPG, PNG, WEBP, HEIC</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleSlipUpload} />
+                    </label>
+                  ) : (
+                    <div className="relative inline-block">
+                      <img
+                        src={slipPreview}
+                        alt="Slip preview"
+                        className="h-44 w-auto rounded-lg border border-slate-200 object-cover shadow-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveSlip}
+                        className="mt-2 text-xs text-red-600 hover:underline block"
+                      >
+                        เปลี่ยนหรือลบรูปสลิป
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                <div className="grid gap-3 self-start sm:grid-cols-2">
-                  <Input
-                    type="date"
-                    value={transferDate}
-                    onChange={(event) => setTransferDate(event.target.value)}
-                  />
-                  <Input
-                    type="time"
-                    value={transferTime}
-                    onChange={(event) => setTransferTime(event.target.value)}
-                  />
-                </div>
+                {slipPreview && (
+                  <div className="space-y-3 self-start">
+                    <p className="font-medium text-foreground text-sm">ข้อมูลการโอนเงิน</p>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">วันที่โอน</label>
+                        <Input
+                          type="date"
+                          value={transferDate}
+                          onChange={(event) => setTransferDate(event.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-slate-500 mb-1 block">เวลาที่โอน</label>
+                        <Input
+                          type="time"
+                          value={transferTime}
+                          onChange={(event) => setTransferTime(event.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
