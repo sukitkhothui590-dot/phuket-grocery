@@ -1,6 +1,62 @@
 import { apiGet, apiPost } from "@/lib/api/client";
 import { mapCoupon, mapOrder, type BackendOrder } from "@/lib/api/mappers";
 import type { Coupon, Order, PaymentMethod, ShippingMethod } from "@/types";
+import { getAccessToken } from "@/lib/api/token";
+
+export interface StaffOrder extends Order {
+  customerName: string;
+  customerPhone: string;
+}
+
+function requireStaffToken() {
+  const token = getAccessToken();
+  if (!token) {
+    throw new Error("กรุณาเข้าสู่ระบบด้วยบัญชีพนักงานก่อนจัดการคำสั่งซื้อ");
+  }
+  return token;
+}
+
+function staffOrderFromBackend(order: BackendOrder): StaffOrder {
+  const mapped = mapOrder(order);
+  return {
+    ...mapped,
+    customerName: order.customerName ?? order.customer?.name ?? mapped.shippingAddress.fullName,
+    customerPhone: order.customer?.phone ?? mapped.shippingAddress.phone,
+  };
+}
+
+function getStaffApiError(code: string, message: string) {
+  const combined = `${code} ${message}`.toLowerCase();
+  if (combined.includes("401") || combined.includes("unauthorized")) {
+    return "เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่";
+  }
+  if (combined.includes("403") || combined.includes("forbidden")) {
+    return "บัญชีนี้ไม่มีสิทธิ์จัดการคำสั่งซื้อ ต้องใช้บัญชีพนักงาน ADMIN";
+  }
+  return message || "เชื่อมต่อระบบหลังบ้านไม่สำเร็จ";
+}
+
+export async function getStaffOrders(): Promise<StaffOrder[]> {
+  const token = requireStaffToken();
+  const response = await apiGet<BackendOrder[]>("/admin/orders", {
+    token,
+    searchParams: { status: "preparing", page: 1, limit: 100 },
+  });
+
+  if (!response.success) {
+    throw new Error(getStaffApiError(response.error.code, response.error.message));
+  }
+  return response.data.map(staffOrderFromBackend);
+}
+
+export async function getStaffOrderById(id: string): Promise<StaffOrder> {
+  const token = requireStaffToken();
+  const response = await apiGet<BackendOrder>(`/admin/orders/${encodeURIComponent(id)}`, { token });
+  if (!response.success) {
+    throw new Error(getStaffApiError(response.error.code, response.error.message));
+  }
+  return staffOrderFromBackend(response.data);
+}
 
 export async function getOrders(token?: string | null): Promise<Order[]> {
   if (!token) {

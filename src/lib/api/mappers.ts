@@ -132,6 +132,8 @@ interface BackendOrderItem {
   name?: string;
   productImage?: string | null;
   productUnitId?: string;
+  sku?: string | null;
+  unit?: string | null;
   unitName?: string;
   unitPrice?: number;
   quantity: number;
@@ -173,6 +175,8 @@ interface BackendOrder {
   transferredAt?: string | null;
   trackingNumber?: string | null;
   shipping?: BackendShipping;
+  customerName?: string;
+  customer?: { name?: string; phone?: string };
   recipientName?: string;
   phone?: string;
   addressLine?: string;
@@ -475,6 +479,7 @@ function mapOrderItem(item: BackendOrderItem): OrderItem {
   const unitId = item.selectedUnit?.id ?? item.productUnitId ?? item.productId;
   const labelTh = resolveUnitLabel(
     item.selectedUnit?.labelTh,
+    item.unit,
     item.unitName,
     item.selectedUnit?.labelEn,
   );
@@ -486,6 +491,7 @@ function mapOrderItem(item: BackendOrderItem): OrderItem {
     productImage: item.productImage
       ? resolveMediaUrl(item.productImage)
       : getPlaceholderUrl(120, 120, productName),
+    barcode: item.sku ?? item.selectedUnit?.sku ?? null,
     selectedUnit: {
       id: unitId,
       unitType: item.selectedUnit?.unitType ?? "piece",
