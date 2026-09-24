@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductCard } from "@/components/product/product-card";
+import { expandProductListings } from "@/lib/product-listings";
 import type { Product, Category } from "@/types";
 
 interface CategoryProductSectionProps {
@@ -122,12 +123,12 @@ export function CategoryProductSection({
             ref={scrollRef}
             className="scrollbar-hide flex gap-5 overflow-x-auto scroll-smooth"
           >
-            {products.map((product) => (
+            {expandProductListings(products).map(({ product, listingUnit, listingKey }) => (
               <div
-                key={product.id}
+                key={listingKey}
                 className="w-[180px] flex-shrink-0 sm:w-[200px] lg:w-[190px] xl:w-[195px]"
               >
-                <ProductCard product={product} />
+                <ProductCard product={product} listingUnit={listingUnit} />
               </div>
             ))}
           </div>

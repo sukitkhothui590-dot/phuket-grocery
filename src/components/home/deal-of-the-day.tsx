@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Clock, ArrowRight } from "lucide-react";
 import { ProductCard } from "@/components/product/product-card";
+import { expandProductListings } from "@/lib/product-listings";
 import type { Product } from "@/types";
 import { useEffect, useState } from "react";
 
@@ -87,8 +88,8 @@ export function DealOfTheDay({ products }: DealOfTheDayProps) {
         {/* Products */}
         <div className="bg-white p-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {products.slice(0, 5).map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {expandProductListings(products.slice(0, 5)).map(({ product, listingUnit, listingKey }) => (
+              <ProductCard key={listingKey} product={product} listingUnit={listingUnit} />
             ))}
           </div>
         </div>

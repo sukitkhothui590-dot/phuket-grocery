@@ -5,6 +5,7 @@ export interface ProductUnit {
   unitType: UnitType;
   labelTh: string;
   labelEn: string;
+  displayLabel?: string;
   /** Effective price after the backend applies the winning campaign. */
   price: number;
   /** Original catalog price before campaign pricing. */
@@ -17,6 +18,12 @@ export interface ProductUnit {
   conversionRate: number;
   sku: string;
   stock: number;
+  priceTiers?: PriceTier[];
+}
+
+export interface PriceTier {
+  minQuantity: number;
+  unitPrice: number;
 }
 
 export interface ActiveDeal {
@@ -35,6 +42,8 @@ export interface Product {
   categoryId: string;
   subcategoryId?: string;
   units: ProductUnit[];
+  listingUnit?: ProductUnit;
+  listingKey?: string;
   baseUnit: UnitType;
   baseStock: number;
   isFeatured?: boolean;

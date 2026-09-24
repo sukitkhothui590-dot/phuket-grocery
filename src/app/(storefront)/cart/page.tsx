@@ -16,6 +16,7 @@ import { validateCoupon } from "@/lib/api/orders";
 import { getProductById } from "@/lib/api/products";
 import { COMPANY_INFO, FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import { getPlaceholderUrl } from "@/lib/placeholder";
+import { getNextPriceTier, getUnitDisplayLabel } from "@/lib/product-promo";
 import type { Product, ProductUnit } from "@/types";
 
 function getProductUnits(product?: Product): ProductUnit[] {
@@ -220,7 +221,7 @@ export default function CartPage() {
             />
           </div>
           <div>สินค้า</div>
-          <div className="text-center">ราคาต่อชิ้น</div>
+          <div className="text-center">ราคาต่อหน่วย</div>
           <div className="text-center">จำนวน</div>
           <div className="text-center">ราคารวม</div>
           <div className="text-center">แอ็กชัน</div>
@@ -256,6 +257,7 @@ export default function CartPage() {
             const selected = selectedKeys.includes(
               getSelectionKey(item.productId, item.selectedUnit.sku)
             );
+            const nextTier = getNextPriceTier(item.selectedUnit, item.quantity);
 
             return (
               <section
@@ -405,14 +407,14 @@ export default function CartPage() {
                           >
                             {availableUnits.map((unit) => (
                               <option key={unit.sku} value={unit.sku}>
-                                {unit.labelTh} - ฿{unit.price.toLocaleString()}
+                                {getUnitDisplayLabel(unit)} - ฿{unit.price.toLocaleString()}
                               </option>
                             ))}
                           </select>
                         </div>
                       ) : (
                         <p className="mt-3 text-xs text-muted-foreground">
-                          {item.selectedUnit.labelTh}
+                          {getUnitDisplayLabel(item.selectedUnit)}
                         </p>
                       )}
 
@@ -431,7 +433,7 @@ export default function CartPage() {
                   </div>
 
                   <div className="flex items-center justify-between text-sm lg:block lg:text-center">
-                    <span className="text-muted-foreground lg:hidden">ราคาต่อชิ้น</span>
+                    <span className="text-muted-foreground lg:hidden">ราคาต่อหน่วย</span>
                     <div className="flex flex-col items-end lg:items-center">
                       <span className="text-foreground">
                         ฿{item.selectedUnit.price.toLocaleString()}
@@ -505,6 +507,12 @@ export default function CartPage() {
                       </button>
                     </div>
                   </div>
+
+                  {nextTier && (
+                    <p className="text-xs text-primary lg:col-span-full">
+                      ซื้ออีก {nextTier.minQuantity - item.quantity} {getUnitDisplayLabel(item.selectedUnit)} ได้ราคาหน่วยละ ฿{nextTier.unitPrice.toLocaleString()}
+                    </p>
+                  )}
 
                   <div className="flex items-center justify-between lg:block lg:text-center">
                     <span className="text-sm text-muted-foreground lg:hidden">ราคารวม</span>

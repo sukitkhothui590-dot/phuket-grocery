@@ -46,6 +46,7 @@ export async function getProducts(params?: {
       page: params?.page ?? 1,
       limit: params?.limit ?? 12,
       onSale: params?.onSale ? "true" : undefined,
+      expandUnits: "true",
       sort: toApiSort(params?.sort),
     },
   });
@@ -76,6 +77,7 @@ export async function searchProductSuggestions(
   const response = await apiGet<BackendProduct[]>("/products", {
     searchParams: {
       search: trimmed,
+      expandUnits: "true",
       categorySlug: options?.categorySlug,
       limit: options?.limit ?? 8,
       page: 1,
@@ -166,6 +168,26 @@ export async function getProductById(
   }
 
   return mapProduct(response.data);
+}
+
+export async function getFrequentlyBoughtTogether(
+  productId: string,
+  limit = 8,
+): Promise<Product[]> {
+  try {
+    const response = await apiGet<BackendProduct[]>(
+      `/products/${encodeURIComponent(productId)}/frequently-bought-together`,
+      { searchParams: { limit } },
+    );
+
+    if (!response.success) return [];
+
+    return response.data
+      .filter((product) => product.id !== productId)
+      .map(mapProduct);
+  } catch {
+    return [];
+  }
 }
 
 export async function getFeaturedProducts(limit = 48): Promise<Product[]> {

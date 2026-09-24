@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ProductCard } from "@/components/product/product-card";
 import { getFeaturedProducts } from "@/lib/api/products";
+import { expandProductListings } from "@/lib/product-listings";
 
 export const metadata: Metadata = {
   title: "สินค้าแนะนำ",
@@ -25,8 +26,8 @@ export default async function FeaturedProductsPage() {
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
+          {expandProductListings(products).map(({ product, listingUnit, listingKey }) => (
+            <ProductCard key={listingKey} product={product} listingUnit={listingUnit} />
           ))}
         </div>
       )}

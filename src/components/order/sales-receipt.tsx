@@ -5,6 +5,7 @@ import {
   SITE_NAME_EN,
 } from "@/lib/constants";
 import type { Order } from "@/types";
+import { getUnitDisplayLabel } from "@/lib/product-promo";
 
 function formatMoney(value: number) {
   return value.toLocaleString("th-TH", {
@@ -146,9 +147,9 @@ export function SalesReceipt({ order }: SalesReceiptProps) {
 
           <div className="shrink-0 text-right">
             <h1 className="text-lg font-bold uppercase leading-tight tracking-wide">
-              Official Receipt
+              Delivery Note
             </h1>
-            <p className="text-sm font-semibold">ใบเสร็จรับเงิน</p>
+            <p className="text-sm font-semibold">ใบส่งของ</p>
             <dl className="mt-2 space-y-1 text-[11px]">
               <div className="flex justify-end gap-2">
                 <dt className="text-neutral-500">No.</dt>
@@ -205,7 +206,7 @@ export function SalesReceipt({ order }: SalesReceiptProps) {
             </p>
             <p className="mt-0.5 font-medium">
               {order.items.length} รายการ ·{" "}
-              {order.items.reduce((sum, item) => sum + item.quantity, 0)} ชิ้น
+              {order.items.reduce((sum, item) => sum + item.quantity, 0)} หน่วยขาย
             </p>
           </div>
         </div>
@@ -236,7 +237,7 @@ export function SalesReceipt({ order }: SalesReceiptProps) {
                 <td className="px-3 py-2.5 text-neutral-600">{index + 1}</td>
                 <td className="px-2 py-2.5 font-medium">{item.productName}</td>
                 <td className="px-2 py-2.5 text-neutral-700">
-                  {item.selectedUnit.labelTh}
+                  {getUnitDisplayLabel(item.selectedUnit)}
                 </td>
                 <td className="px-2 py-2.5 text-right tabular-nums">
                   {item.quantity}
@@ -257,7 +258,7 @@ export function SalesReceipt({ order }: SalesReceiptProps) {
       <section className="grid shrink-0 grid-cols-[1.1fr_0.9fr] border-b border-neutral-300">
         <div className="border-r border-neutral-300 px-4 py-3 sm:px-5">
           <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-            จำนวนเงินตัวอักษร
+            ยอดรวมเป็นตัวอักษร
           </p>
           <p className="mt-1 text-sm font-semibold leading-5">
             {thaiBahtText(order.total)}
@@ -310,31 +311,26 @@ export function SalesReceipt({ order }: SalesReceiptProps) {
       <section className="grid shrink-0 grid-cols-[1.2fr_1fr] gap-4 px-4 py-4 sm:px-5">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-wide text-neutral-500">
-            รับเงินแล้ว
+            การส่งมอบสินค้า
           </p>
           <p className="mt-1 text-[11px] leading-5 text-neutral-700">
-            ได้รับเงินจำนวน{" "}
-            <span className="font-semibold">
-              {formatMoney(order.total)} บาท
-            </span>{" "}
-            สำหรับรายการตามใบเสร็จนี้
-            {order.paymentMethod === "cod" ? " (ชำระเมื่อรับสินค้า / COD)" : ""}
+            โปรดตรวจสอบรายการและจำนวนสินค้าตามเอกสารฉบับนี้ก่อนลงชื่อรับสินค้า
           </p>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="text-center">
             <div className="mx-auto mb-1.5 h-12 w-full border-b border-neutral-400" />
-            <p className="text-[10px] font-semibold">ผู้ขาย</p>
+            <p className="text-[10px] font-semibold">ผู้จัดส่ง</p>
           </div>
           <div className="text-center">
             <div className="mx-auto mb-1.5 h-12 w-full border-b border-neutral-400" />
-            <p className="text-[10px] font-semibold">ผู้รับ</p>
+            <p className="text-[10px] font-semibold">ผู้รับสินค้า</p>
           </div>
         </div>
       </section>
 
       <footer className="mt-auto shrink-0 border-t border-neutral-300 px-4 py-2 text-center text-[10px] leading-4 text-neutral-500 sm:px-5">
-        เอกสารอิเล็กทรอนิกส์ · ขอบคุณที่ใช้บริการ {SITE_NAME}
+        เอกสารใบส่งของ · ขอบคุณที่ใช้บริการ {SITE_NAME}
       </footer>
     </article>
   );

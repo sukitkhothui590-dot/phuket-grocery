@@ -1,6 +1,7 @@
 ﻿import { resolveMediaUrl, resolveMediaUrls } from "@/lib/api/media";
 import { getPlaceholderUrl } from "@/lib/placeholder";
 import { resolveStoreLink } from "@/lib/store-links";
+import { formatUnitDisplayLabel } from "@/lib/product-promo";
 import type {
   Address,
   Banner,
@@ -13,6 +14,7 @@ import type {
   OrderStatus,
   Product,
   ProductUnit,
+  PriceTier,
   Subcategory,
   UnitType,
   User,
@@ -37,6 +39,7 @@ interface BackendProductUnit {
   unitType?: string;
   labelTh?: string | null;
   labelEn?: string | null;
+  displayLabel?: string | null;
   sku: string;
   level: number;
   conversionToBase: number;
@@ -51,6 +54,14 @@ interface BackendProductUnit {
   isActive: boolean;
   stock?: number;
   stockStatus?: string;
+  priceTiers?: Array<{
+    minQuantity?: number;
+    minimumQuantity?: number;
+    minQty?: number;
+    quantity?: number;
+    unitPrice?: number;
+    price?: number;
+  }>;
 }
 
 interface BackendProduct {
@@ -79,6 +90,8 @@ interface BackendProduct {
     badge?: string | null;
   } | null;
   units: BackendProductUnit[];
+  listingUnit?: BackendProductUnit | null;
+  listingKey?: string;
   stock?: {
     balance: number;
     reserved: number;
@@ -122,6 +135,9 @@ interface BackendUser {
   phone: string | null;
   role?: string;
   status?: string;
+  memberCode?: string | null;
+  memberCodeClaim?: string | null;
+  customerType?: User["customerType"];
   createdAt: string;
 }
 
@@ -177,6 +193,7 @@ interface BackendOrder {
   shipping?: BackendShipping;
   customerName?: string;
   customer?: { name?: string; phone?: string };
+  adminNote?: string | null;
   recipientName?: string;
   phone?: string;
   addressLine?: string;
@@ -212,6 +229,18 @@ function mapUnitType(unit: BackendProductUnit): UnitType {
 }
 
 export function mapProductUnit(unit: BackendProductUnit): ProductUnit {
+  const labelTh = unit.labelTh ?? unit.unitName;
+  const conversionRate = unit.conversionRate ?? unit.conversionToBase;
+  const displayLabel =
+    unit.displayLabel?.trim() ||
+    formatUnitDisplayLabel(labelTh, conversionRate);
+  const priceTiers: PriceTier[] = (unit.priceTiers ?? [])
+    .map((tier) => ({
+      minQuantity: tier.minQuantity ?? tier.minimumQuantity ?? tier.minQty ?? tier.quantity ?? 0,
+      unitPrice: tier.unitPrice ?? tier.price ?? 0,
+    }))
+    .filter((tier) => tier.minQuantity > 0 && tier.unitPrice >= 0)
+    .sort((a, b) => a.minQuantity - b.minQuantity);
   const referencePrice =
     unit.compareAtPrice && unit.compareAtPrice > unit.price
       ? unit.compareAtPrice
@@ -224,15 +253,16 @@ export function mapProductUnit(unit: BackendProductUnit): ProductUnit {
   return {
     id: unit.id,
     unitType: mapUnitType(unit),
-    labelTh: unit.labelTh ?? unit.unitName,
+    labelTh,
     labelEn: unit.labelEn ?? unit.unitName,
+    displayLabel,
     price: unit.price,
     basePrice: unit.basePrice ?? undefined,
     listPrice: unit.listPrice ?? undefined,
     compareAtPrice: referencePrice,
     salePriceOverride: unit.salePriceOverride ?? undefined,
     dealId: unit.dealId ?? undefined,
-    conversionRate: unit.conversionRate ?? unit.conversionToBase,
+    conversionRate,
     sku: unit.sku,
     stock:
       typeof unit.stock === "number"
@@ -240,6 +270,7 @@ export function mapProductUnit(unit: BackendProductUnit): ProductUnit {
         : unit.stockStatus === "OUT_OF_STOCK"
           ? 0
           : -1,
+    priceTiers: priceTiers.length ? priceTiers : undefined,
   };
 }
 
@@ -294,6 +325,8 @@ export function mapProduct(product: BackendProduct): Product {
         }
         return mapped;
       }),
+    listingUnit: product.listingUnit ? mapProductUnit(product.listingUnit) : undefined,
+    listingKey: product.listingKey,
     baseUnit: baseUnit ? mapUnitType(baseUnit) : "piece",
     baseStock: availableStock ?? 0,
     isFeatured: product.isFeatured ?? false,
@@ -409,6 +442,9 @@ export function mapUser(user: BackendUser): User {
     lastName: rest.join(" "),
     addresses: [],
     createdAt: user.createdAt,
+    memberCode: user.memberCode ?? null,
+    memberCodeClaim: user.memberCodeClaim ?? null,
+    customerType: user.customerType ?? null,
   };
 }
 
@@ -472,6 +508,7 @@ function mapOrderItem(item: BackendOrderItem): OrderItem {
   const unitPrice = item.unitPrice ?? item.selectedUnit?.price ?? 0;
   const unitId = item.selectedUnit?.id ?? item.productUnitId ?? item.productId;
   const labelTh = resolveUnitLabel(
+    item.selectedUnit?.displayLabel,
     item.selectedUnit?.labelTh,
     item.unit,
     item.unitName,

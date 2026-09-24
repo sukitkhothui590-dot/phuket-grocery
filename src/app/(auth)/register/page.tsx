@@ -33,6 +33,16 @@ const registerSchema = z
     phone: z.string().min(9, "เบอร์โทรศัพท์ไม่ถูกต้อง"),
     password: z.string().min(8, "รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร"),
     confirmPassword: z.string().min(1, "กรุณายืนยันรหัสผ่าน"),
+    memberCode: z.string().optional(),
+    customerType: z.enum([
+      "บุคคล",
+      "ร้านค้า",
+      "ร้านอาหาร",
+      "โรงแรม",
+      "โรงเรียน",
+      "ที่ราชการ",
+      "อื่นๆ",
+    ]),
     address: z.object({
       label: z.string().min(1, "กรุณาเลือกป้ายที่อยู่"),
       fullName: z.string().min(1, "กรุณากรอกชื่อผู้รับ"),
@@ -57,6 +67,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [regionError, setRegionError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [addressLabelMode, setAddressLabelMode] =
     useState<AddressLabel>("บ้าน");
 
@@ -80,6 +91,8 @@ export default function RegisterPage() {
         addressLine1: "",
         addressLine2: "",
       },
+      customerType: "บุคคล",
+      memberCode: "",
     },
   });
 
@@ -119,6 +132,7 @@ export default function RegisterPage() {
 
     setLoading(true);
     setError("");
+    setSuccessMessage("");
     setRegionError("");
 
     try {
@@ -128,6 +142,8 @@ export default function RegisterPage() {
         email: data.email,
         phone: data.phone,
         password: data.password,
+        memberCode: data.memberCode,
+        customerType: data.customerType,
         address: {
           ...data.address,
           label: addressLabelMode,
@@ -144,7 +160,12 @@ export default function RegisterPage() {
           accessToken: result.accessToken,
           refreshToken: result.refreshToken,
         });
-        router.push("/");
+        if (!data.memberCode?.trim()) {
+          setSuccessMessage("สมัครสมาชิกสำเร็จ คุณจะได้รับรหัสสมาชิกพร้อมสินค้าในการจัดส่งครั้งถัดไป");
+          window.setTimeout(() => router.push("/"), 2200);
+        } else {
+          router.push("/");
+        }
       } else {
         setError(result.error || "สมัครสมาชิกไม่สำเร็จ");
       }
@@ -166,6 +187,11 @@ export default function RegisterPage() {
           {error && (
             <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
               {error}
+            </div>
+          )}
+          {successMessage && (
+            <div role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-700">
+              {successMessage}
             </div>
           )}
 
@@ -199,6 +225,28 @@ export default function RegisterPage() {
                     {errors.lastName.message}
                   </p>
                 )}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="memberCode">รหัสสมาชิกหน้าร้าน (ถ้ามี)</Label>
+                <Input
+                  id="memberCode"
+                  placeholder="กรอกรหัสสมาชิกเดิม"
+                  {...register("memberCode")}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="customerType">ประเภทลูกค้า</Label>
+                <select
+                  id="customerType"
+                  {...register("customerType")}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  {["บุคคล", "ร้านค้า", "ร้านอาหาร", "โรงแรม", "โรงเรียน", "ที่ราชการ", "อื่นๆ"].map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

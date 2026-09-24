@@ -23,6 +23,7 @@ import { getStoreSettings } from "@/lib/api/settings";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/constants";
 import { ORDER_STATUS_CONFIG, ORDER_STATUS_FLOW } from "@/lib/order-status";
 import type { Order } from "@/types";
+import { getUnitDisplayLabel } from "@/lib/product-promo";
 import { Input } from "@/components/ui/input";
 
 function formatDateTime(value: string) {
@@ -229,7 +230,7 @@ export default function OrderDetailPage() {
                 <Link href={`/account/orders/${order.id}/receipt`}>
                   <Button variant="outline" className="gap-2 rounded-full">
                     <FileText className="h-4 w-4" />
-                    ใบเสร็จรับเงิน
+                    ใบส่งของ
                   </Button>
                 </Link>
               </div>
@@ -315,10 +316,10 @@ export default function OrderDetailPage() {
                           {item.productName}
                         </p>
                         <p className="mt-2 text-sm text-slate-500">
-                          {item.selectedUnit.labelTh}
+                          {getUnitDisplayLabel(item.selectedUnit)}
                         </p>
                         <p className="mt-1 text-sm text-slate-500">
-                          จำนวน {item.quantity} ชิ้น
+                          จำนวน {item.quantity} {getUnitDisplayLabel(item.selectedUnit)}
                         </p>
                       </div>
 

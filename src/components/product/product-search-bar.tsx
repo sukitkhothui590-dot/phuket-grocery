@@ -5,7 +5,7 @@ import { Loader2, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { searchProductSuggestions } from "@/lib/api/products";
-import { getDisplayUnit } from "@/lib/product-promo";
+import { getDisplayUnit, getUnitDisplayLabel } from "@/lib/product-promo";
 import { getPlaceholderUrl } from "@/lib/placeholder";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types";
@@ -204,7 +204,7 @@ export function ProductSearchBar({
                           </p>
                           {displayUnit && (
                             <p className="mt-0.5 text-xs text-muted-foreground">
-                              {displayUnit.labelTh} · ฿
+                              {getUnitDisplayLabel(displayUnit)} · ฿
                               {displayUnit.price.toLocaleString()}
                             </p>
                           )}

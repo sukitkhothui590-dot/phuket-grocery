@@ -30,6 +30,7 @@ import { createAddress } from "@/lib/api/addresses";
 import { checkout } from "@/lib/api/orders";
 import { getStoreSettings } from "@/lib/api/settings";
 import { clearCartEverywhere } from "@/lib/cart-actions";
+import { getUnitDisplayLabel } from "@/lib/product-promo";
 import {
   COMPANY_INFO,
 } from "@/lib/constants";
@@ -848,7 +849,7 @@ export default function CheckoutPage() {
                             </span>
                           )}
                           <p className="mt-2 text-sm text-slate-400">
-                            ตัวเลือกสินค้า: {item.selectedUnit.labelTh}
+                            ตัวเลือกสินค้า: {getUnitDisplayLabel(item.selectedUnit)}
                           </p>
                         </div>
                       </div>

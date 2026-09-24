@@ -2,6 +2,7 @@ import { apiGet } from "@/lib/api/client";
 import { mapProduct, type BackendProduct } from "@/lib/api/mappers";
 import { resolveMediaUrls } from "@/lib/api/media";
 import { getPlaceholderUrl } from "@/lib/placeholder";
+import { formatUnitDisplayLabel } from "@/lib/product-promo";
 import { decodeRouteParam } from "@/lib/route-params";
 import type {
   CampaignDetail,
@@ -30,6 +31,8 @@ interface BackendCampaignSummary {
 interface BackendCampaignProductUnit {
   id: string;
   unitName: string;
+  displayLabel?: string | null;
+  conversionRate?: number;
   sku: string;
   level: number;
   isBaseUnit: boolean;
@@ -38,6 +41,14 @@ interface BackendCampaignProductUnit {
   basePrice?: number | null;
   compareAtPrice?: number | null;
   salePriceOverride?: number | null;
+  priceTiers?: Array<{
+    minQuantity?: number;
+    minimumQuantity?: number;
+    minQty?: number;
+    quantity?: number;
+    unitPrice?: number;
+    price?: number;
+  }>;
 }
 
 interface BackendCampaignProduct {
@@ -93,21 +104,30 @@ function fallbackProduct(
           : unit.basePrice && unit.basePrice > unit.price
             ? unit.basePrice
             : undefined;
+    const conversionRate = unit.conversionRate ?? 1;
 
     return {
       id: unit.id,
       unitType: unitType(unit.level),
       labelTh: unit.unitName,
       labelEn: unit.unitName,
+      displayLabel:
+        unit.displayLabel ??
+        formatUnitDisplayLabel(unit.unitName, conversionRate),
       price: unit.price,
       basePrice: unit.basePrice ?? undefined,
       listPrice: unit.listPrice ?? undefined,
       compareAtPrice,
       salePriceOverride: unit.salePriceOverride ?? undefined,
       dealId: campaign.id,
-      conversionRate: 1,
+      conversionRate,
       sku: unit.sku,
       stock: 0,
+      priceTiers: unit.priceTiers?.flatMap((tier) => {
+        const minQuantity = tier.minQuantity ?? tier.minimumQuantity ?? tier.minQty ?? tier.quantity ?? 0;
+        const unitPrice = tier.unitPrice ?? tier.price ?? 0;
+        return minQuantity > 0 ? [{ minQuantity, unitPrice }] : [];
+      }),
     };
   });
 

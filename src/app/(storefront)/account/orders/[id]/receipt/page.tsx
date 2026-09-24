@@ -46,13 +46,13 @@ export default function OrderReceiptPage() {
         >
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              เอกสารใบเสร็จ
+              เอกสารจัดส่งสินค้า
             </p>
             <h1 className="mt-1 text-xl font-bold text-foreground">
-              ใบเสร็จรับเงิน
+              ใบส่งของ
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              หน้านี้สำหรับดูและพิมพ์ใบเสร็จเท่านั้น แยกจากหน้ายืนยันคำสั่งซื้อ
+              ตรวจสอบรายการสินค้าและพิมพ์เอกสารสำหรับแนบไปกับสินค้า
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -76,20 +76,20 @@ export default function OrderReceiptPage() {
               )}
             >
               <Printer className="size-4" />
-              พิมพ์ใบเสร็จ
+              พิมพ์ใบส่งของ
             </button>
           </div>
         </div>
 
         {loading ? (
           <div className="rounded-xl border border-dashed bg-white px-6 py-16 text-center text-sm text-muted-foreground print:hidden">
-            กำลังโหลดใบเสร็จ...
+            กำลังโหลดใบส่งของ...
           </div>
         ) : order ? (
           <SalesReceipt order={order} />
         ) : (
           <div className="rounded-xl border border-dashed bg-white px-6 py-16 text-center text-sm text-muted-foreground print:hidden">
-            ไม่พบข้อมูลใบเสร็จของคำสั่งซื้อนี้
+            ไม่พบข้อมูลใบส่งของของคำสั่งซื้อนี้
           </div>
         )}
       </div>

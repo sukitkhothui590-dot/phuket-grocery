@@ -28,11 +28,15 @@ import {
   stripHtml,
 } from "@/lib/html";
 import { getPlaceholderUrl } from "@/lib/placeholder";
+import { getUnitDisplayLabel } from "@/lib/product-promo";
+import { expandProductListings } from "@/lib/product-listings";
 import type { Product, ProductUnit } from "@/types";
 
 interface ProductDetailClientProps {
   product: Product;
   relatedProducts: Product[];
+  pairingProducts: Product[];
+  hasPurchaseRecommendations: boolean;
   categoryName: string;
   categorySlug: string;
 }
@@ -40,6 +44,8 @@ interface ProductDetailClientProps {
 export function ProductDetailClient({
   product,
   relatedProducts,
+  pairingProducts,
+  hasPurchaseRecommendations,
   categoryName,
   categorySlug,
 }: ProductDetailClientProps) {
@@ -391,7 +397,7 @@ export function ProductDetailClient({
             {selectedUnit.stock > 0 ? (
               <span className="flex items-center gap-1 text-sm text-green-600">
                 <Check className="h-3.5 w-3.5" />
-                มีสินค้า ({selectedUnit.stock} {selectedUnit.labelTh})
+                มีสินค้า ({selectedUnit.stock} {getUnitDisplayLabel(selectedUnit)})
               </span>
             ) : (
               <span className="text-sm text-red-500">สินค้าหมด</span>
@@ -555,7 +561,7 @@ export function ProductDetailClient({
                     </td>
                     <td className="px-4 py-2.5 text-muted-foreground">
                       {product.units
-                        .map((u) => u.labelTh)
+                        .map(getUnitDisplayLabel)
                         .join(", ")}
                     </td>
                   </tr>
@@ -572,7 +578,7 @@ export function ProductDetailClient({
                       สต็อก
                     </td>
                     <td className="px-4 py-2.5 text-muted-foreground">
-                      {selectedUnit.stock} {selectedUnit.labelTh}
+                      {selectedUnit.stock} {getUnitDisplayLabel(selectedUnit)}
                     </td>
                   </tr>
                 </tbody>
@@ -586,15 +592,35 @@ export function ProductDetailClient({
         </div>
       </div>
 
+      {pairingProducts.length > 0 && (
+        <section className="mt-8 space-y-4">
+          <div>
+            <h2 className="text-xl font-bold text-foreground">
+              ลูกค้านิยมซื้อร่วมกัน
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {hasPurchaseRecommendations
+                ? "สินค้าที่มักถูกสั่งซื้อพร้อมกับรายการนี้"
+                : "ตัวอย่างสินค้าแนะนำที่มักเลือกซื้อคู่กัน"}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {expandProductListings(pairingProducts).map(({ product: item, listingUnit, listingKey }) => (
+              <ProductCard key={listingKey} product={item} listingUnit={listingUnit} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Related Products */}
       {relatedProducts.length > 0 && (
         <section className="mt-8 space-y-4">
           <h2 className="text-xl font-bold text-foreground">
-            สินค้าที่เกี่ยวข้อง
+            สินค้าแนะนำสำหรับคุณ
           </h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {relatedProducts.map((p) => (
-              <ProductCard key={p.id} product={p} />
+            {expandProductListings(relatedProducts).map(({ product: p, listingUnit, listingKey }) => (
+              <ProductCard key={listingKey} product={p} listingUnit={listingUnit} />
             ))}
           </div>
         </section>

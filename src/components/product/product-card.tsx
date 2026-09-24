@@ -5,12 +5,19 @@ import { useState } from "react";
 import { ShoppingCart, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ProductRating } from "@/components/product/product-rating";
-import type { Product } from "@/types";
+import type { Product, ProductUnit } from "@/types";
 import { addToCart } from "@/lib/cart-actions";
-import { getDisplayUnit, getPromoDetails } from "@/lib/product-promo";
+import {
+  getDisplayUnit,
+  getPromoDetails,
+  getUnitDisplayLabel,
+  sortProductUnits,
+} from "@/lib/product-promo";
 
 interface ProductCardProps {
   product: Product;
+  listingUnit?: ProductUnit;
+  unitLabelFilter?: string;
   /**
    * Cart provenance label. Special Deal surfaces (`/deals`) should pass
    * `"ดีลพิเศษ"` so campaign-priced items still read as store sale deals.
@@ -18,16 +25,28 @@ interface ProductCardProps {
   sourceLabel?: string;
 }
 
-export function ProductCard({ product, sourceLabel }: ProductCardProps) {
+export function ProductCard({ product, sourceLabel, listingUnit, unitLabelFilter }: ProductCardProps) {
   const [added, setAdded] = useState(false);
-  const displayUnit = getDisplayUnit(product);
+  const visibleUnits = listingUnit
+    ? [listingUnit]
+    : unitLabelFilter
+    ? product.units.filter((unit) => getUnitDisplayLabel(unit) === unitLabelFilter)
+    : product.units;
+  const displayUnit = listingUnit ?? (unitLabelFilter
+    ? visibleUnits.find((unit) => unit.stock > 0) ?? visibleUnits[0]
+    : getDisplayUnit(product));
+  const [selectedSku, setSelectedSku] = useState(
+    () => displayUnit?.sku ?? "",
+  );
+  const selectedUnit: ProductUnit | undefined =
+    visibleUnits.find((unit) => unit.sku === selectedSku) ?? displayUnit;
 
-  if (!displayUnit) return null;
+  if (!displayUnit || !selectedUnit) return null;
 
   const hasDiscount =
-    !!displayUnit.compareAtPrice &&
-    displayUnit.compareAtPrice > displayUnit.price;
-  const { discountPercent, savedAmount } = getPromoDetails(displayUnit);
+    !!selectedUnit.compareAtPrice &&
+    selectedUnit.compareAtPrice > selectedUnit.price;
+  const { discountPercent, savedAmount } = getPromoDetails(selectedUnit);
   const cartSourceLabel =
     sourceLabel ??
     (hasDiscount || product.activeDeal ? "ดีลพิเศษ" : undefined);
@@ -35,7 +54,7 @@ export function ProductCard({ product, sourceLabel }: ProductCardProps) {
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (displayUnit.stock <= 0) {
+    if (selectedUnit.stock <= 0) {
       window.alert("สินค้าหมดสต็อก");
       return;
     }
@@ -43,9 +62,9 @@ export function ProductCard({ product, sourceLabel }: ProductCardProps) {
       productId: product.id,
       productName: product.name,
       productImage: product.images[0] ?? "",
-      selectedUnit: displayUnit,
+      selectedUnit,
       quantity: 1,
-      dealId: displayUnit.dealId ?? product.activeDeal?.id,
+      dealId: selectedUnit.dealId ?? product.activeDeal?.id,
       dealBadge: product.activeDeal?.badge ?? product.activeDeal?.title,
       dealTitle: product.activeDeal?.title,
       dealSlug: product.activeDeal?.slug,
@@ -117,35 +136,64 @@ export function ProductCard({ product, sourceLabel }: ProductCardProps) {
           className="mt-1"
         />
 
-        <p className="mt-1 text-xs text-muted-foreground">
-          {displayUnit.labelTh}
-        </p>
+        {visibleUnits.length > 1 && (
+          <div className="mt-2 grid grid-cols-2 gap-1.5" aria-label="เลือกหน่วยขาย">
+            {sortProductUnits(visibleUnits).map((unit) => {
+              const isSelected = unit.sku === selectedUnit.sku;
+              return (
+                <button
+                  key={unit.sku}
+                  type="button"
+                  disabled={unit.stock <= 0}
+                  aria-pressed={isSelected}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setSelectedSku(unit.sku);
+                    setAdded(false);
+                  }}
+                  className={`min-w-0 rounded-md border px-2 py-1.5 text-left text-[11px] transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                    isSelected
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40"
+                  }`}
+                >
+                  <span className="block truncate font-medium">
+                    {getUnitDisplayLabel(unit)}
+                  </span>
+                  <span className="mt-0.5 block font-semibold">
+                    ฿{unit.price.toLocaleString()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         <div className="mt-auto flex items-end gap-2 pt-2">
           <div className="flex items-baseline gap-0.5 text-primary">
             <span className="text-base font-bold leading-none">฿</span>
             <span className="text-[28px] font-extrabold leading-none tracking-tight">
-              {displayUnit.price.toLocaleString()}
+              {selectedUnit.price.toLocaleString()}
             </span>
           </div>
           {hasDiscount && (
             <span className="mb-0.5 text-sm text-muted-foreground line-through">
-              ฿{displayUnit.compareAtPrice!.toLocaleString()}
+              ฿{selectedUnit.compareAtPrice!.toLocaleString()}
             </span>
           )}
         </div>
 
-        {product.units.length > 1 && (
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            มี {product.units.length} หน่วยนับ
-          </p>
-        )}
+        <p className="mt-1 text-xs text-muted-foreground">
+          ราคาต่อ {getUnitDisplayLabel(selectedUnit)}
+        </p>
 
         <button
           type="button"
           data-testid="add-to-cart"
           onClick={handleAddToCart}
-          className={`mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-bold text-white shadow-sm transition-all active:scale-[0.98] ${
+          disabled={selectedUnit.stock <= 0}
+          className={`mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg text-sm font-bold text-white shadow-sm transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-400 ${
             added
               ? "bg-green-600 hover:bg-green-600"
               : "bg-primary hover:bg-primary/90"
@@ -159,7 +207,7 @@ export function ProductCard({ product, sourceLabel }: ProductCardProps) {
           ) : (
             <>
               <ShoppingCart className="h-4 w-4" strokeWidth={2.5} />
-              เพิ่มลงตะกร้า
+              {selectedUnit.stock <= 0 ? "สินค้าหมด" : "เพิ่มลงตะกร้า"}
             </>
           )}
         </button>

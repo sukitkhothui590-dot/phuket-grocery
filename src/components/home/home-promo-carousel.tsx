@@ -18,7 +18,11 @@ const CARD_WIDTH_CLASS =
  * or load from `/campaigns/active`. Display prices as returned by the backend.
  */
 export function HomePromoCarousel({ products }: HomePromoCarouselProps) {
-  if (products.length === 0) {
+  const uniqueProducts = Array.from(
+    new Map(products.map((product) => [product.id, product])).values(),
+  );
+
+  if (uniqueProducts.length === 0) {
     return (
       <section
         id="promotions"
@@ -45,7 +49,7 @@ export function HomePromoCarousel({ products }: HomePromoCarouselProps) {
       visibleCount={5}
       showCountdown
     >
-      {products.map((product) => (
+      {uniqueProducts.map((product) => (
         <div key={product.id} className={CARD_WIDTH_CLASS}>
           <PromoCarouselCard product={product} />
         </div>
