@@ -17,6 +17,8 @@ export interface OrderItem {
   productId: string;
   productName: string;
   productImage: string;
+  /** Barcode snapshot stored on the order item when checkout was created. */
+  barcode?: string | null;
   selectedUnit: ProductUnit;
   quantity: number;
   subtotal: number;

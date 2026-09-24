@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Thai } from "next/font/google";
 import { Header, Footer } from "@/components/layout";
+import { RouteShell } from "@/components/layout/route-shell";
 import { AppProviders } from "@/components/providers/app-providers";
 import { SITE_NAME, SITE_DESCRIPTION } from "@/lib/constants";
 import { getCategories } from "@/lib/api/products";
@@ -36,11 +37,12 @@ export default async function RootLayout({
     <html lang="th">
       <body className={`${notoSansThai.variable} font-sans antialiased`}>
         <AppProviders>
-          <div className="flex min-h-screen flex-col">
-            <Header categories={categories} />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
+          <RouteShell
+            header={<Header key="store-header" categories={categories} />}
+            footer={<Footer key="store-footer" />}
+          >
+            {children}
+          </RouteShell>
         </AppProviders>
       </body>
     </html>
