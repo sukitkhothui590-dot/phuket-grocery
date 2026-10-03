@@ -1,4 +1,5 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api/client";
+import type { PriceTier } from "@/types";
 
 export interface ServerCartItem {
   id: string;
@@ -7,6 +8,7 @@ export interface ServerCartItem {
   productName?: string;
   unitName?: string;
   unitPrice?: number;
+  priceTiers?: PriceTier[];
   quantity: number;
   lineTotal?: number;
   available: boolean;

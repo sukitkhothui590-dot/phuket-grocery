@@ -38,13 +38,13 @@ export default function OrderReceiptPage() {
         >
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              เอกสารใบสั่งซื้อ
+              เอกสารจัดส่งสินค้า
             </p>
             <h1 className="mt-1 text-xl font-bold text-foreground">
-              ใบสั่งซื้อ
+              ใบส่งของ
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              หน้านี้สำหรับดูและพิมพ์ใบสั่งซื้อ จะเปิดให้ดูได้หลังพนักงานตรวจสอบและอนุมัติ
+              หน้านี้สำหรับดูและพิมพ์ใบส่งของ จะเปิดให้ดูได้หลังพนักงานตรวจสอบและอนุมัติ
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -68,7 +68,7 @@ export default function OrderReceiptPage() {
                 )}
               >
                 <Printer className="size-4" />
-                พิมพ์ใบสั่งซื้อ
+                พิมพ์ใบส่งของ
               </button>
             )}
           </div>
@@ -76,7 +76,7 @@ export default function OrderReceiptPage() {
 
         {receipt === null ? (
           <div className="rounded-xl border border-dashed bg-white px-6 py-16 text-center text-sm text-muted-foreground print:hidden">
-            กำลังโหลดใบสั่งซื้อ...
+            กำลังโหลดใบส่งของ...
           </div>
         ) : receipt.state === "released" ? (
           <SalesReceipt order={receipt.order} />
@@ -93,7 +93,7 @@ export default function OrderReceiptPage() {
             </p>
             {receipt.orderNumber && (
               <p className="mt-4 text-sm text-foreground">
-                เลขที่ใบสั่งซื้อ{" "}
+                เลขที่คำสั่งซื้อ{" "}
                 <span className="font-semibold">{receipt.orderNumber}</span>
               </p>
             )}
@@ -110,7 +110,7 @@ export default function OrderReceiptPage() {
           </section>
         ) : (
           <div className="rounded-xl border border-dashed bg-white px-6 py-16 text-center text-sm text-muted-foreground print:hidden">
-            ไม่พบข้อมูลใบสั่งซื้อของคำสั่งซื้อนี้
+            ไม่พบข้อมูลใบส่งของของคำสั่งซื้อนี้
           </div>
         )}
       </div>

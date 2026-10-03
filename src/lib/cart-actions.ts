@@ -28,6 +28,7 @@ function mapServerCartItem(
         ...unit,
         price: item.unitPrice ?? unit.price,
         dealId: item.dealId ?? unit.dealId,
+        priceTiers: item.priceTiers ?? unit.priceTiers,
       }
     : {
         id: item.productUnitId,
@@ -35,11 +36,13 @@ function mapServerCartItem(
         labelTh: item.unitName ?? "ชิ้น",
         labelEn: item.unitName ?? "piece",
         price: item.unitPrice ?? 0,
+        displayLabel: item.unitName ?? "ชิ้น",
         conversionRate: 1,
         sku: item.productUnitId,
         // Never invent "999" stock — unknown becomes 0 when unavailable.
         stock: item.available ? Math.max(item.quantity, 0) : 0,
         dealId: item.dealId ?? undefined,
+        priceTiers: item.priceTiers,
       };
   const hasDiscount =
     selectedUnit.compareAtPrice !== undefined &&

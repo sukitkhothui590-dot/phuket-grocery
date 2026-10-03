@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCategories, getProducts } from "@/lib/api/products";
 import { ProductCard } from "@/components/product/product-card";
+import { expandProductListings } from "@/lib/product-listings";
 import { CategoriesSearchSection } from "@/components/product/categories-search-section";
 import {
   ProductPagination,
@@ -43,8 +44,8 @@ export default async function CategoriesPage({
         ) : (
           <div id="product-results" className="scroll-mt-36">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+              {expandProductListings(products).map(({ product, listingUnit, listingKey }) => (
+                <ProductCard key={listingKey} product={product} listingUnit={listingUnit} />
               ))}
             </div>
             <ProductPagination

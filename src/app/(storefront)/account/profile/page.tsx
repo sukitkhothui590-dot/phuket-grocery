@@ -40,6 +40,16 @@ const profileSchema = z.object({
   lastName: z.string().min(1, "กรุณากรอกนามสกุล"),
   email: z.string().email("อีเมลไม่ถูกต้อง"),
   phone: z.string().min(9, "เบอร์โทรศัพท์ไม่ถูกต้อง"),
+  memberCode: z.string().optional(),
+  customerType: z.enum([
+    "บุคคล",
+    "ร้านค้า",
+    "ร้านอาหาร",
+    "โรงแรม",
+    "โรงเรียน",
+    "ที่ราชการ",
+    "อื่นๆ",
+  ]),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -78,6 +88,8 @@ export default function ProfilePage() {
       lastName: user?.lastName || "",
       email: user?.email || "",
       phone: user?.phone || "",
+      memberCode: user?.memberCode ?? "",
+      customerType: user?.customerType ?? "บุคคล",
     },
   });
 
@@ -98,6 +110,8 @@ export default function ProfilePage() {
         lastName: user.lastName,
         email: user.email,
         phone: user.phone,
+        memberCode: user.memberCode ?? "",
+        customerType: user.customerType ?? "บุคคล",
       });
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -120,6 +134,10 @@ export default function ProfilePage() {
       name: `${data.firstName} ${data.lastName}`.trim(),
       phone: data.phone,
       email: data.email,
+      ...(!user.memberCode && data.memberCode?.trim()
+        ? { memberCode: data.memberCode.trim() }
+        : {}),
+      customerType: data.customerType,
     });
 
     setProfileLoading(false);
@@ -134,6 +152,8 @@ export default function ProfilePage() {
       lastName: result.user?.lastName ?? data.lastName,
       email: result.user?.email ?? data.email,
       phone: result.user?.phone ?? data.phone,
+      memberCode: result.user?.memberCode ?? data.memberCode?.trim() ?? user.memberCode,
+      customerType: result.user?.customerType ?? data.customerType,
     });
     setProfileSaved(true);
     setTimeout(() => setProfileSaved(false), 3000);
@@ -310,6 +330,31 @@ export default function ProfilePage() {
                     {profileForm.formState.errors.phone.message}
                   </p>
                 )}
+              </div>
+              {!user.memberCode && (
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="memberCode">รหัสสมาชิกจากใบส่งของ</Label>
+                  <Input
+                    id="memberCode"
+                    placeholder="กรอกรหัสที่ได้รับจากพนักงานจัดส่ง"
+                    {...profileForm.register("memberCode")}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    เมื่อพนักงานกำหนดรหัสสมาชิกให้แล้ว ช่องนี้จะถูกปิด
+                  </p>
+                </div>
+              )}
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="customerType">ประเภทลูกค้า</Label>
+                <select
+                  id="customerType"
+                  {...profileForm.register("customerType")}
+                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  {["บุคคล", "ร้านค้า", "ร้านอาหาร", "โรงแรม", "โรงเรียน", "ที่ราชการ", "อื่นๆ"].map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="flex items-center gap-3">

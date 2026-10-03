@@ -140,7 +140,7 @@ export default function CheckoutSuccessPage() {
               )}
             >
               <FileText className="size-4" />
-              เปิดใบสั่งซื้อ
+              เปิดใบส่งของ
             </Link>
           )}
           <a
