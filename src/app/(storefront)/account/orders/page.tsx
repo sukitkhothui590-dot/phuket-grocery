@@ -14,6 +14,7 @@ import {
   type OrderStatusGroup,
 } from "@/lib/order-status";
 import type { Order } from "@/types";
+import { getUnitDisplayLabel } from "@/lib/product-promo";
 
 function formatOrderDate(value: string) {
   return new Date(value).toLocaleDateString("th-TH", {
@@ -231,7 +232,7 @@ export default function OrdersPage() {
                               {firstItem.productName}
                             </p>
                             <p className="mt-1 text-sm text-slate-500">
-                              {firstItem.selectedUnit.labelTh} x {firstItem.quantity}
+                              {getUnitDisplayLabel(firstItem.selectedUnit)} × {firstItem.quantity}
                             </p>
                             {order.items.length > 1 && (
                               <p className="mt-2 text-xs text-slate-400">

@@ -1,6 +1,6 @@
 import { apiGet, apiPatch, apiPost } from "@/lib/api/client";
 import { createAddress, getAddresses } from "@/lib/api/addresses";
-import { mapUser } from "@/lib/api/mappers";
+import { mapUser, toBackendCustomerType } from "@/lib/api/mappers";
 import type { LoginCredentials, RegisterData, User } from "@/types";
 
 interface AuthPayload {
@@ -10,6 +10,9 @@ interface AuthPayload {
     email: string | null;
     phone: string | null;
     createdAt: string;
+    memberCode?: string | null;
+    memberCodeClaim?: string | null;
+    customerType?: string | null;
   };
   tokens: {
     accessToken: string;
@@ -63,6 +66,8 @@ export async function register(
     email: data.email,
     phone: data.phone,
     password: data.password,
+    memberCode: data.memberCode?.trim() || undefined,
+    customerType: toBackendCustomerType(data.customerType),
   });
 
   if (!response.success) {
@@ -109,6 +114,9 @@ export async function getCurrentUser(
     email: string | null;
     phone: string | null;
     createdAt: string;
+    memberCode?: string | null;
+    memberCodeClaim?: string | null;
+    customerType?: string | null;
   }>("/users/me", { token });
 
   if (!response.success) {
@@ -143,7 +151,13 @@ export async function logout(refreshToken: string): Promise<void> {
 
 export async function updateProfile(
   token: string,
-  data: { name: string; phone?: string; email?: string },
+  data: {
+    name: string;
+    phone?: string;
+    email?: string;
+    memberCode?: string;
+    customerType?: NonNullable<User["customerType"]>;
+  },
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   const response = await apiPatch<{
     id: string;
@@ -151,7 +165,14 @@ export async function updateProfile(
     email: string | null;
     phone: string | null;
     createdAt: string;
-  }>("/users/me", data, { token });
+    memberCode?: string | null;
+    memberCodeClaim?: string | null;
+    customerType?: string | null;
+  }>(
+    "/users/me",
+    { ...data, customerType: toBackendCustomerType(data.customerType) },
+    { token },
+  );
 
   if (!response.success) {
     return {

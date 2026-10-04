@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { ProductCard } from "@/components/product/product-card";
+import { expandProductListings } from "@/lib/product-listings";
 import type { Product } from "@/types";
 
 interface NewArrivalsProps {
@@ -37,8 +38,8 @@ export function NewArrivals({ products }: NewArrivalsProps) {
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {products.slice(0, 5).map((product) => (
-            <ProductCard key={product.id} product={product} />
+          {expandProductListings(products.slice(0, 5)).map(({ product, listingUnit, listingKey }) => (
+            <ProductCard key={listingKey} product={product} listingUnit={listingUnit} />
           ))}
         </div>
       </div>

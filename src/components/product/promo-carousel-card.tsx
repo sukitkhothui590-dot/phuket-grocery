@@ -7,6 +7,7 @@ import type { Product } from "@/types";
 import { addToCart } from "@/lib/cart-actions";
 import { getDisplayUnit, getPromoDetails } from "@/lib/product-promo";
 import { ProductRating } from "@/components/product/product-rating";
+import { getUnitDisplayLabel } from "@/lib/product-promo";
 
 interface PromoCarouselCardProps {
   product: Product;
@@ -95,7 +96,7 @@ export function PromoCarouselCard({ product }: PromoCarouselCardProps) {
         className="relative aspect-square overflow-hidden rounded-t-xl bg-muted"
       >
         <span className="absolute right-2.5 top-2.5 z-10 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-medium text-muted-foreground shadow-sm ring-1 ring-border backdrop-blur-sm">
-          {unit.labelTh}
+          {getUnitDisplayLabel(unit)}
         </span>
 
         <img
@@ -146,7 +147,7 @@ export function PromoCarouselCard({ product }: PromoCarouselCardProps) {
           )}
           {pricePerPiece && (
             <span className="truncate text-[11px] text-muted-foreground">
-              ฿{pricePerPiece.toLocaleString()}/{pieceUnit.labelTh}
+              ฿{pricePerPiece.toLocaleString()}/{getUnitDisplayLabel(pieceUnit)}
             </span>
           )}
         </div>

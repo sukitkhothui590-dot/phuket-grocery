@@ -1,5 +1,34 @@
 import type { Product, ProductUnit } from "@/types";
 
+const unitOrder: Record<ProductUnit["unitType"], number> = {
+  piece: 0,
+  box: 1,
+  case: 2,
+};
+
+export function formatUnitDisplayLabel(labelValue: string, conversionRate: number): string {
+  const label = labelValue.trim();
+  const contents = label.match(/^(.+?)\s*\((.+)\)$/);
+  if (contents) return `${contents[1]} × ${contents[2]}`;
+  return conversionRate > 1 ? `${label} × ${conversionRate}` : label;
+}
+
+export function getUnitDisplayLabel(unit: ProductUnit): string {
+  return unit.displayLabel?.trim() || formatUnitDisplayLabel(unit.labelTh, unit.conversionRate);
+}
+
+export function getNextPriceTier(unit: ProductUnit, quantity: number) {
+  return unit.priceTiers
+    ?.filter((tier) => tier.minQuantity > quantity)
+    .sort((first, second) => first.minQuantity - second.minQuantity)[0];
+}
+
+export function sortProductUnits(units: ProductUnit[]): ProductUnit[] {
+  return [...units].sort(
+    (first, second) => unitOrder[first.unitType] - unitOrder[second.unitType],
+  );
+}
+
 export function getBestPromoUnit(product: Product): ProductUnit | null {
   const discounted = product.units.filter(
     (unit) => unit.compareAtPrice && unit.compareAtPrice > unit.price

@@ -29,6 +29,8 @@ interface CategoryProductsClientProps {
   currentSub: string;
   currentSearch: string;
   currentSort: string;
+  currentUnit: string;
+  unitOptions: string[];
 }
 
 const SORT_OPTIONS = [
@@ -46,6 +48,8 @@ export function CategoryProductsClient({
   currentSub,
   currentSearch,
   currentSort,
+  currentUnit,
+  unitOptions,
 }: CategoryProductsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -86,7 +90,7 @@ export function CategoryProductsClient({
     router.push(`/categories/${category.slug}`);
   };
 
-  const hasActiveFilters = currentSub || currentSearch || currentSort;
+  const hasActiveFilters = currentSub || currentSearch || currentSort || currentUnit;
 
   const subcategoryList = (
     <nav className="space-y-1">
@@ -192,6 +196,29 @@ export function CategoryProductsClient({
         </div>
       </div>
 
+      <div className="mb-5 flex flex-wrap items-center gap-2" aria-label="กรองตามหน่วยขาย">
+        <span className="mr-1 text-sm font-medium text-foreground">หน่วยขาย:</span>
+        {["", ...unitOptions].map((unitLabel) => {
+          const isSelected = (currentUnit || "") === unitLabel;
+          return (
+            <button
+              key={unitLabel || "all"}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => updateParams({ unit: unitLabel })}
+              className={cn(
+                "min-h-9 rounded-full border px-4 text-sm font-medium transition-colors",
+                isSelected
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-white text-foreground hover:border-primary hover:text-primary",
+              )}
+            >
+              {unitLabel || "ทุกหน่วย"}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Mobile subcategory filter */}
       {mobileFilterOpen && (
         <div className="mb-5 rounded-lg border bg-white p-4 lg:hidden">
@@ -219,13 +246,17 @@ export function CategoryProductsClient({
           <p className="mb-3 text-sm text-muted-foreground">
             พบ {total.toLocaleString()} สินค้า
           </p>
-          <ProductGrid products={products} />
+          <ProductGrid
+            products={products}
+            unitLabelFilter={currentUnit || undefined}
+          />
           <ProductPagination
             pathname={`/categories/${category.slug}`}
             query={{
               sub: currentSub || undefined,
               search: currentSearch || undefined,
               sort: currentSort || undefined,
+              unit: currentUnit || undefined,
             }}
             page={page}
             limit={STOREFRONT_PAGE_SIZE}
