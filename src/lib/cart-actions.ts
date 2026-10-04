@@ -6,6 +6,7 @@ import {
   type ServerCartItem,
   updateCartItem,
 } from "@/lib/api/cart";
+import { mapPriceTiers } from "@/lib/api/mappers";
 import { getProductById, getProducts } from "@/lib/api/products";
 import { getPlaceholderUrl } from "@/lib/placeholder";
 import { getAccessToken } from "@/lib/api/token";
@@ -28,7 +29,7 @@ function mapServerCartItem(
         ...unit,
         price: item.unitPrice ?? unit.price,
         dealId: item.dealId ?? unit.dealId,
-        priceTiers: item.priceTiers ?? unit.priceTiers,
+        priceTiers: item.priceTiers ? mapPriceTiers(item.priceTiers) : unit.priceTiers,
       }
     : {
         id: item.productUnitId,
@@ -42,7 +43,7 @@ function mapServerCartItem(
         // Never invent "999" stock — unknown becomes 0 when unavailable.
         stock: item.available ? Math.max(item.quantity, 0) : 0,
         dealId: item.dealId ?? undefined,
-        priceTiers: item.priceTiers,
+        priceTiers: mapPriceTiers(item.priceTiers),
       };
   const hasDiscount =
     selectedUnit.compareAtPrice !== undefined &&

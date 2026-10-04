@@ -1,5 +1,5 @@
 import { apiDelete, apiGet, apiPatch, apiPost } from "@/lib/api/client";
-import type { PriceTier } from "@/types";
+import type { BackendPriceTier } from "@/lib/api/mappers";
 
 export interface ServerCartItem {
   id: string;
@@ -8,7 +8,7 @@ export interface ServerCartItem {
   productName?: string;
   unitName?: string;
   unitPrice?: number;
-  priceTiers?: PriceTier[];
+  priceTiers?: BackendPriceTier[];
   quantity: number;
   lineTotal?: number;
   available: boolean;

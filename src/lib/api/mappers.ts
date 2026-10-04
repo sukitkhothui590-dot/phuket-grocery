@@ -4,6 +4,7 @@ import { resolveStoreLink } from "@/lib/store-links";
 import { formatUnitDisplayLabel } from "@/lib/product-promo";
 import type {
   Address,
+  CustomerType,
   Banner,
   BlogPost,
   Category,
@@ -54,14 +55,7 @@ interface BackendProductUnit {
   isActive: boolean;
   stock?: number;
   stockStatus?: string;
-  priceTiers?: Array<{
-    minQuantity?: number;
-    minimumQuantity?: number;
-    minQty?: number;
-    quantity?: number;
-    unitPrice?: number;
-    price?: number;
-  }>;
+  priceTiers?: BackendPriceTier[];
 }
 
 interface BackendProduct {
@@ -137,7 +131,7 @@ interface BackendUser {
   status?: string;
   memberCode?: string | null;
   memberCodeClaim?: string | null;
-  customerType?: User["customerType"];
+  customerType?: string | null;
   createdAt: string;
 }
 
@@ -230,19 +224,33 @@ function mapUnitType(unit: BackendProductUnit): UnitType {
   return "case";
 }
 
-export function mapProductUnit(unit: BackendProductUnit): ProductUnit {
-  const labelTh = unit.labelTh ?? unit.unitName;
-  const conversionRate = unit.conversionRate ?? unit.conversionToBase;
-  const displayLabel =
-    unit.displayLabel?.trim() ||
-    formatUnitDisplayLabel(labelTh, conversionRate);
-  const priceTiers: PriceTier[] = (unit.priceTiers ?? [])
+// The API sends { minQty, price }; older payloads used other names.
+export interface BackendPriceTier {
+  minQuantity?: number;
+  minimumQuantity?: number;
+  minQty?: number;
+  quantity?: number;
+  unitPrice?: number;
+  price?: number;
+}
+
+export function mapPriceTiers(tiers?: BackendPriceTier[]): PriceTier[] {
+  return (tiers ?? [])
     .map((tier) => ({
       minQuantity: tier.minQuantity ?? tier.minimumQuantity ?? tier.minQty ?? tier.quantity ?? 0,
       unitPrice: tier.unitPrice ?? tier.price ?? 0,
     }))
     .filter((tier) => tier.minQuantity > 0 && tier.unitPrice >= 0)
     .sort((a, b) => a.minQuantity - b.minQuantity);
+}
+
+export function mapProductUnit(unit: BackendProductUnit): ProductUnit {
+  const labelTh = unit.labelTh ?? unit.unitName;
+  const conversionRate = unit.conversionRate ?? unit.conversionToBase;
+  const displayLabel =
+    unit.displayLabel?.trim() ||
+    formatUnitDisplayLabel(labelTh, conversionRate);
+  const priceTiers = mapPriceTiers(unit.priceTiers);
   const referencePrice =
     unit.compareAtPrice && unit.compareAtPrice > unit.price
       ? unit.compareAtPrice
@@ -446,7 +454,7 @@ export function mapUser(user: BackendUser): User {
     createdAt: user.createdAt,
     memberCode: user.memberCode ?? null,
     memberCodeClaim: user.memberCodeClaim ?? null,
-    customerType: user.customerType ?? null,
+    customerType: fromBackendCustomerType(user.customerType),
   };
 }
 
@@ -634,3 +642,22 @@ export type {
   BackendUser,
   BackendOrder,
 };
+
+// The API stores the Prisma enum; the storefront forms work in Thai labels.
+const CUSTOMER_TYPES: Record<string, CustomerType> = {
+  INDIVIDUAL: "บุคคล",
+  SHOP: "ร้านค้า",
+  RESTAURANT: "ร้านอาหาร",
+  HOTEL: "โรงแรม",
+  SCHOOL: "โรงเรียน",
+  GOVERNMENT: "ที่ราชการ",
+  OTHER: "อื่นๆ",
+};
+
+export function fromBackendCustomerType(value?: string | null): CustomerType | null {
+  return (value && CUSTOMER_TYPES[value]) || null;
+}
+
+export function toBackendCustomerType(label?: CustomerType | null): string | undefined {
+  return Object.keys(CUSTOMER_TYPES).find((key) => CUSTOMER_TYPES[key] === label);
+}

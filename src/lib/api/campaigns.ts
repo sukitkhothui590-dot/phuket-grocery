@@ -1,5 +1,5 @@
 import { apiGet } from "@/lib/api/client";
-import { mapProduct, type BackendProduct } from "@/lib/api/mappers";
+import { mapPriceTiers, mapProduct, type BackendPriceTier, type BackendProduct } from "@/lib/api/mappers";
 import { resolveMediaUrls } from "@/lib/api/media";
 import { getPlaceholderUrl } from "@/lib/placeholder";
 import { formatUnitDisplayLabel } from "@/lib/product-promo";
@@ -41,14 +41,7 @@ interface BackendCampaignProductUnit {
   basePrice?: number | null;
   compareAtPrice?: number | null;
   salePriceOverride?: number | null;
-  priceTiers?: Array<{
-    minQuantity?: number;
-    minimumQuantity?: number;
-    minQty?: number;
-    quantity?: number;
-    unitPrice?: number;
-    price?: number;
-  }>;
+  priceTiers?: BackendPriceTier[];
 }
 
 interface BackendCampaignProduct {
@@ -123,11 +116,7 @@ function fallbackProduct(
       conversionRate,
       sku: unit.sku,
       stock: 0,
-      priceTiers: unit.priceTiers?.flatMap((tier) => {
-        const minQuantity = tier.minQuantity ?? tier.minimumQuantity ?? tier.minQty ?? tier.quantity ?? 0;
-        const unitPrice = tier.unitPrice ?? tier.price ?? 0;
-        return minQuantity > 0 ? [{ minQuantity, unitPrice }] : [];
-      }),
+      priceTiers: mapPriceTiers(unit.priceTiers),
     };
   });
 

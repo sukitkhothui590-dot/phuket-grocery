@@ -1,6 +1,6 @@
 import { apiGet, apiPatch, apiPost } from "@/lib/api/client";
 import { createAddress, getAddresses } from "@/lib/api/addresses";
-import { mapUser } from "@/lib/api/mappers";
+import { mapUser, toBackendCustomerType } from "@/lib/api/mappers";
 import type { LoginCredentials, RegisterData, User } from "@/types";
 
 interface AuthPayload {
@@ -12,7 +12,7 @@ interface AuthPayload {
     createdAt: string;
     memberCode?: string | null;
     memberCodeClaim?: string | null;
-    customerType?: User["customerType"];
+    customerType?: string | null;
   };
   tokens: {
     accessToken: string;
@@ -67,7 +67,7 @@ export async function register(
     phone: data.phone,
     password: data.password,
     memberCode: data.memberCode?.trim() || undefined,
-    customerType: data.customerType,
+    customerType: toBackendCustomerType(data.customerType),
   });
 
   if (!response.success) {
@@ -116,7 +116,7 @@ export async function getCurrentUser(
     createdAt: string;
     memberCode?: string | null;
     memberCodeClaim?: string | null;
-    customerType?: User["customerType"];
+    customerType?: string | null;
   }>("/users/me", { token });
 
   if (!response.success) {
@@ -167,8 +167,12 @@ export async function updateProfile(
     createdAt: string;
     memberCode?: string | null;
     memberCodeClaim?: string | null;
-    customerType?: User["customerType"];
-  }>("/users/me", data, { token });
+    customerType?: string | null;
+  }>(
+    "/users/me",
+    { ...data, customerType: toBackendCustomerType(data.customerType) },
+    { token },
+  );
 
   if (!response.success) {
     return {
